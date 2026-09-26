@@ -50,13 +50,13 @@ isOneToOne: false
                   ]
                 },"anticipos": {
                   Row: {
-                    "cliente_id": string | null,"comprobante_ref": string | null,"created_at": string | null,"forma_pago": Database["public"]['Enums']["metodo_pago"],"id": string,"monto": number,"pedido_id": string | null
+                    "cliente_id": string | null,"comprobante_ref": string | null,"created_at": string | null,"forma_pago": Database["public"]['Enums']["metodo_pago"],"id": string,"monto": number,"operation_id": string | null,"pedido_id": string | null
                   }
                   Insert: {
-                    "cliente_id"?: string | null,"comprobante_ref"?: string | null,"created_at"?: string | null,"forma_pago"?: Database["public"]['Enums']["metodo_pago"],"id"?: string,"monto": number,"pedido_id"?: string | null
+                    "cliente_id"?: string | null,"comprobante_ref"?: string | null,"created_at"?: string | null,"forma_pago"?: Database["public"]['Enums']["metodo_pago"],"id"?: string,"monto": number,"operation_id"?: string | null,"pedido_id"?: string | null
                   }
                   Update: {
-                    "cliente_id"?: string | null,"comprobante_ref"?: string | null,"created_at"?: string | null,"forma_pago"?: Database["public"]['Enums']["metodo_pago"],"id"?: string,"monto"?: number,"pedido_id"?: string | null
+                    "cliente_id"?: string | null,"comprobante_ref"?: string | null,"created_at"?: string | null,"forma_pago"?: Database["public"]['Enums']["metodo_pago"],"id"?: string,"monto"?: number,"operation_id"?: string | null,"pedido_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -70,6 +70,25 @@ isOneToOne: false
       columns: ["pedido_id"]
 isOneToOne: false
       referencedRelation: "pedidos"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"bitacora_auditoria": {
+                  Row: {
+                    "accion": string,"created_at": string | null,"datos_anteriores": Json | null,"datos_nuevos": Json | null,"id": string,"registro_id": string | null,"tabla_afectada": string,"usuario_id": string | null
+                  }
+                  Insert: {
+                    "accion": string,"created_at"?: string | null,"datos_anteriores"?: Json | null,"datos_nuevos"?: Json | null,"id"?: string,"registro_id"?: string | null,"tabla_afectada": string,"usuario_id"?: string | null
+                  }
+                  Update: {
+                    "accion"?: string,"created_at"?: string | null,"datos_anteriores"?: Json | null,"datos_nuevos"?: Json | null,"id"?: string,"registro_id"?: string | null,"tabla_afectada"?: string,"usuario_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bitacora_auditoria_usuario_id_fkey"
+      columns: ["usuario_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -286,6 +305,68 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"devolucion_items": {
+                  Row: {
+                    "cantidad": number,"devolucion_id": string | null,"id": string,"precio_unitario": number,"producto_id": string | null,"subtotal": number
+                  }
+                  Insert: {
+                    "cantidad": number,"devolucion_id"?: string | null,"id"?: string,"precio_unitario": number,"producto_id"?: string | null,"subtotal": number
+                  }
+                  Update: {
+                    "cantidad"?: number,"devolucion_id"?: string | null,"id"?: string,"precio_unitario"?: number,"producto_id"?: string | null,"subtotal"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "devolucion_items_devolucion_id_fkey"
+      columns: ["devolucion_id"]
+isOneToOne: false
+      referencedRelation: "devoluciones"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "devolucion_items_producto_id_fkey"
+      columns: ["producto_id"]
+isOneToOne: false
+      referencedRelation: "productos"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"devoluciones": {
+                  Row: {
+                    "autorizado_por": string | null,"cliente_id": string,"created_at": string | null,"id": string,"monto_total": number,"motivo": string,"operation_id": string | null,"sucursal_id": string,"venta_id": string
+                  }
+                  Insert: {
+                    "autorizado_por"?: string | null,"cliente_id": string,"created_at"?: string | null,"id"?: string,"monto_total": number,"motivo": string,"operation_id"?: string | null,"sucursal_id": string,"venta_id": string
+                  }
+                  Update: {
+                    "autorizado_por"?: string | null,"cliente_id"?: string,"created_at"?: string | null,"id"?: string,"monto_total"?: number,"motivo"?: string,"operation_id"?: string | null,"sucursal_id"?: string,"venta_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "devoluciones_autorizado_por_fkey"
+      columns: ["autorizado_por"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "devoluciones_cliente_id_fkey"
+      columns: ["cliente_id"]
+isOneToOne: false
+      referencedRelation: "clientes"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "devoluciones_sucursal_id_fkey"
+      columns: ["sucursal_id"]
+isOneToOne: false
+      referencedRelation: "sucursales"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "devoluciones_venta_id_fkey"
+      columns: ["venta_id"]
+isOneToOne: false
+      referencedRelation: "ventas"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"disenos": {
                   Row: {
                     "archivo_url": string | null,"cliente_id": string | null,"created_at": string | null,"id": string,"nombre": string,"observaciones": string | null
@@ -401,13 +482,13 @@ isOneToOne: false
                   ]
                 },"movimientos_caja": {
                   Row: {
-                    "concepto": string,"created_at": string | null,"id": string,"monto": number,"referencia_id": string | null,"sesion_caja_id": string | null,"tipo": string
+                    "concepto": string,"created_at": string | null,"id": string,"monto": number,"operation_id": string | null,"referencia_id": string | null,"sesion_caja_id": string | null,"tipo": string
                   }
                   Insert: {
-                    "concepto": string,"created_at"?: string | null,"id"?: string,"monto": number,"referencia_id"?: string | null,"sesion_caja_id"?: string | null,"tipo": string
+                    "concepto": string,"created_at"?: string | null,"id"?: string,"monto": number,"operation_id"?: string | null,"referencia_id"?: string | null,"sesion_caja_id"?: string | null,"tipo": string
                   }
                   Update: {
-                    "concepto"?: string,"created_at"?: string | null,"id"?: string,"monto"?: number,"referencia_id"?: string | null,"sesion_caja_id"?: string | null,"tipo"?: string
+                    "concepto"?: string,"created_at"?: string | null,"id"?: string,"monto"?: number,"operation_id"?: string | null,"referencia_id"?: string | null,"sesion_caja_id"?: string | null,"tipo"?: string
                   }
                   Relationships: [
                     {
@@ -470,13 +551,13 @@ isOneToOne: false
                   ]
                 },"pagos": {
                   Row: {
-                    "cliente_id": string | null,"created_at": string | null,"forma_pago": Database["public"]['Enums']["metodo_pago"],"id": string,"monto": number,"referencia": string | null,"venta_id": string | null
+                    "cliente_id": string | null,"created_at": string | null,"forma_pago": Database["public"]['Enums']["metodo_pago"],"id": string,"monto": number,"operation_id": string | null,"referencia": string | null,"venta_id": string | null
                   }
                   Insert: {
-                    "cliente_id"?: string | null,"created_at"?: string | null,"forma_pago": Database["public"]['Enums']["metodo_pago"],"id"?: string,"monto": number,"referencia"?: string | null,"venta_id"?: string | null
+                    "cliente_id"?: string | null,"created_at"?: string | null,"forma_pago": Database["public"]['Enums']["metodo_pago"],"id"?: string,"monto": number,"operation_id"?: string | null,"referencia"?: string | null,"venta_id"?: string | null
                   }
                   Update: {
-                    "cliente_id"?: string | null,"created_at"?: string | null,"forma_pago"?: Database["public"]['Enums']["metodo_pago"],"id"?: string,"monto"?: number,"referencia"?: string | null,"venta_id"?: string | null
+                    "cliente_id"?: string | null,"created_at"?: string | null,"forma_pago"?: Database["public"]['Enums']["metodo_pago"],"id"?: string,"monto"?: number,"operation_id"?: string | null,"referencia"?: string | null,"venta_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -753,13 +834,13 @@ isOneToOne: false
                   ]
                 },"traslados": {
                   Row: {
-                    "created_at": string | null,"estado": Database["public"]['Enums']["estado_traslado"] | null,"id": string,"recibido_por": string | null,"solicitado_por": string | null,"sucursal_destino_id": string | null,"sucursal_origen_id": string | null,"updated_at": string | null
+                    "created_at": string | null,"estado": Database["public"]['Enums']["estado_traslado"] | null,"id": string,"operation_id": string | null,"recibido_por": string | null,"solicitado_por": string | null,"sucursal_destino_id": string | null,"sucursal_origen_id": string | null,"updated_at": string | null
                   }
                   Insert: {
-                    "created_at"?: string | null,"estado"?: Database["public"]['Enums']["estado_traslado"] | null,"id"?: string,"recibido_por"?: string | null,"solicitado_por"?: string | null,"sucursal_destino_id"?: string | null,"sucursal_origen_id"?: string | null,"updated_at"?: string | null
+                    "created_at"?: string | null,"estado"?: Database["public"]['Enums']["estado_traslado"] | null,"id"?: string,"operation_id"?: string | null,"recibido_por"?: string | null,"solicitado_por"?: string | null,"sucursal_destino_id"?: string | null,"sucursal_origen_id"?: string | null,"updated_at"?: string | null
                   }
                   Update: {
-                    "created_at"?: string | null,"estado"?: Database["public"]['Enums']["estado_traslado"] | null,"id"?: string,"recibido_por"?: string | null,"solicitado_por"?: string | null,"sucursal_destino_id"?: string | null,"sucursal_origen_id"?: string | null,"updated_at"?: string | null
+                    "created_at"?: string | null,"estado"?: Database["public"]['Enums']["estado_traslado"] | null,"id"?: string,"operation_id"?: string | null,"recibido_por"?: string | null,"solicitado_por"?: string | null,"sucursal_destino_id"?: string | null,"sucursal_origen_id"?: string | null,"updated_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -840,13 +921,13 @@ isOneToOne: false
                   ]
                 },"ventas": {
                   Row: {
-                    "cliente_id": string | null,"created_at": string | null,"id": string,"pedido_id": string | null,"sucursal_id": string | null,"total": number,"vendedor_id": string | null
+                    "cliente_id": string | null,"created_at": string | null,"id": string,"operation_id": string | null,"pedido_id": string | null,"sucursal_id": string | null,"total": number,"vendedor_id": string | null
                   }
                   Insert: {
-                    "cliente_id"?: string | null,"created_at"?: string | null,"id"?: string,"pedido_id"?: string | null,"sucursal_id"?: string | null,"total": number,"vendedor_id"?: string | null
+                    "cliente_id"?: string | null,"created_at"?: string | null,"id"?: string,"operation_id"?: string | null,"pedido_id"?: string | null,"sucursal_id"?: string | null,"total": number,"vendedor_id"?: string | null
                   }
                   Update: {
-                    "cliente_id"?: string | null,"created_at"?: string | null,"id"?: string,"pedido_id"?: string | null,"sucursal_id"?: string | null,"total"?: number,"vendedor_id"?: string | null
+                    "cliente_id"?: string | null,"created_at"?: string | null,"id"?: string,"operation_id"?: string | null,"pedido_id"?: string | null,"sucursal_id"?: string | null,"total"?: number,"vendedor_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -884,6 +965,9 @@ isOneToOne: false
             "abrir_caja":
 { Args: { "p_monto_apertura": number,"p_sucursal_id": string,"p_usuario_id": string }; Returns: string
                            },
+"aplicar_saldo_favor":
+{ Args: { "p_cliente_id": string,"p_concepto": string,"p_monto": number,"p_referencia_id"?: string }; Returns: undefined
+                           },
 "cerrar_caja":
 { Args: { "p_monto_cierre": number,"p_sesion_caja_id": string }; Returns: undefined
                            },
@@ -893,20 +977,44 @@ isOneToOne: false
 "generar_comision":
 { Args: { "p_venta_id": string }; Returns: string
                            },
+"guardar_conteo_batch":
+{ Args: { "p_conteo_id": string,"p_items": Json }; Returns: undefined
+                           },
+"marcar_entrega":
+{ Args: { "p_observaciones"?: string,"p_pedido_id": string,"p_recibido_por": string }; Returns: string
+                           },
+"reasignar_cartera":
+{ Args: { "p_autorizado_por": string,"p_vendedor_destino_id": string,"p_vendedor_origen_id": string }; Returns: undefined
+                           },
 "registrar_anticipo":
 { Args: { "p_cliente_id": string,"p_comprobante_ref": string,"p_forma_pago": Database["public"]['Enums']["metodo_pago"],"p_monto": number,"p_pedido_id": string }; Returns: string
+                           },
+"registrar_devolucion":
+{ Args: { "p_autorizado_por": string,"p_items": Json,"p_motivo": string,"p_operation_id"?: string,"p_venta_id": string }; Returns: string
+                           },
+"registrar_entrada_inventario":
+{ Args: { "p_cantidad": number,"p_motivo": string,"p_producto_id": string,"p_sucursal_id": string,"p_usuario_id": string }; Returns: undefined
                            },
 "registrar_gasto":
 { Args: { "p_categoria": string,"p_comprobante_url": string,"p_descripcion": string,"p_monto": number,"p_registrado_por": string,"p_sesion_caja_id": string,"p_sucursal_id": string }; Returns: string
                            },
+"registrar_pago":
+{ Args: { "p_cuenta_cobrar_id": string,"p_forma_pago": Database["public"]['Enums']["metodo_pago"],"p_monto": number,"p_operation_id"?: string,"p_referencia": string,"p_registrado_por": string,"p_sesion_caja_id"?: string }; Returns: string
+                           },
 "registrar_venta":
 { Args: { "p_cliente_id": string,"p_items": Json,"p_pedido_id"?: string,"p_sesion_caja_id": string,"p_sucursal_id": string,"p_tipo_pago": string,"p_total": number,"p_vendedor_id": string }; Returns: string
+                           },
+"revisar_vencimientos_credito":
+{ Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "show_limit":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
 "show_trgm":
 { Args: { "": string }; Returns: (string)[]
+                           },
+"trasladar_inventario":
+{ Args: { "p_cantidad": number,"p_operation_id"?: string,"p_producto_id": string,"p_solicitado_por": string,"p_sucursal_destino_id": string,"p_sucursal_origen_id": string }; Returns: string
                            }
           }
           Enums: {
