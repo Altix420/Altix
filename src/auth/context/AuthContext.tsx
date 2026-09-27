@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
-import { Database } from '../types/database.types';
+import { supabase } from '../../shared/lib/supabase';
+import type { Database } from '../../shared/types/database.types';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 type Sucursal = Database['public']['Tables']['sucursales']['Row'];
@@ -29,15 +29,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      else setLoading(false);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    }).catch((err) => {
+      console.error('Error inicializando sesión:', err);
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      else {
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
         setProfile(null);
         setSucursalActiva(null);
         setLoading(false);
@@ -53,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (profileData) setProfile(profileData);
 
@@ -62,13 +69,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select('sucursales(*)')
         .eq('user_id', userId)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (sucursalData && sucursalData.sucursales) {
         setSucursalActiva(sucursalData.sucursales as unknown as Sucursal);
       }
     } catch (err) {
-      console.error('Error cargando datos de usuario:', err);
+      console.error('Error cargando datos del perfil:', err);
     } finally {
       setLoading(false);
     }

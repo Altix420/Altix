@@ -28,3 +28,40 @@ INSERT INTO inventarios (sucursal_id, producto_id, stock, stock_minimo) VALUES
 ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380c11', 1000.00, 50.00),
 ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380c22', 500.00, 30.00),
 ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380c11', 300.00, 20.00);
+
+-- Usuario Administrador de Prueba en Auth
+INSERT INTO auth.users (
+  id,
+  instance_id,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  created_at,
+  updated_at,
+  role,
+  aud
+) VALUES (
+  'e0eebc99-9c0b-4ef8-bb6d-6bb9bd380e11',
+  '00000000-0000-0000-0000-000000000000',
+  'admin@altix.gt',
+  crypt('Altix2026!', gen_salt('bf')),
+  now(),
+  '{"provider":"email","providers":["email"]}',
+  '{"nombre_completo":"Administrador Altix"}',
+  now(),
+  now(),
+  'authenticated',
+  'authenticated'
+) ON CONFLICT (id) DO NOTHING;
+
+-- Perfil de Administrador
+INSERT INTO profiles (id, nombre_completo, role, activo)
+VALUES ('e0eebc99-9c0b-4ef8-bb6d-6bb9bd380e11', 'Administrador Altix', 'administrador', true)
+ON CONFLICT (id) DO UPDATE SET role = 'administrador';
+
+-- Asignación a Sucursal Central
+INSERT INTO usuario_sucursal (user_id, sucursal_id)
+VALUES ('e0eebc99-9c0b-4ef8-bb6d-6bb9bd380e11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')
+ON CONFLICT DO NOTHING;
