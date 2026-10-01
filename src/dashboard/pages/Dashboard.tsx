@@ -1,51 +1,49 @@
 import React from 'react';
-import { useAuth } from '../../auth/context/AuthContext';
-import { ShieldCheck, Zap, HardDrive, Database as DatabaseIcon } from 'lucide-react';
+import { ArrowUpRight, Database as DatabaseIcon, HardDrive, ShieldCheck, Zap } from 'lucide-react';
+import { useAuth } from '../../auth/hooks/useAuth';
 
 export const Dashboard: React.FC = () => {
   const { profile, sucursalActiva } = useAuth();
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 border-b border-gray-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            ¡Bienvenido, {profile?.nombre_completo?.split(' ')[0]}! 👋
-          </h1>
-          <p className="text-xs text-gray-500 mt-1">
-            Rol: <span className="font-semibold text-gray-800 capitalize">{profile?.role}</span> | 
-            Sucursal: <span className="font-semibold text-gray-800">{sucursalActiva?.nombre || 'Central'}</span>
-          </p>
+          <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-gray-400">Resumen operativo</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-950">Buenos días, {profile?.nombre_completo?.split(' ')[0]}</h1>
+          <p className="mt-2 text-sm text-gray-500">{sucursalActiva?.nombre || 'Sucursal Central'} · <span className="capitalize">{profile?.role}</span></p>
         </div>
-
-        <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-bold">
-          <ShieldCheck size={16} />
-          <span>Sistema Operativo</span>
-        </div>
+        <div className="flex items-center gap-2 text-sm text-emerald-700"><ShieldCheck size={16} /> Operativo</div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Estado Base de Datos</span>
-          <p className="text-lg font-bold text-gray-800 mt-1 flex items-center gap-2">
-            <Zap className="text-amber-500" size={18} /> PostgreSQL + RLS Activo
-          </p>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Almacenamiento Cloud</span>
-          <p className="text-lg font-bold text-gray-800 mt-1 flex items-center gap-2">
-            <HardDrive className="text-blue-500" size={18} /> Cloudflare R2 Presigned
-          </p>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Modo Desconectado</span>
-          <p className="text-lg font-bold text-gray-800 mt-1 flex items-center gap-2">
-            <DatabaseIcon className="text-purple-500" size={18} /> IndexedDB Activo
-          </p>
-        </div>
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+        <Status label="Base de datos" icon={<Zap className="text-amber-500" size={16} />}>PostgreSQL · RLS activo</Status>
+        <Status label="Archivos" icon={<HardDrive className="text-blue-500" size={16} />}>Cloudflare R2</Status>
+        <Status label="Modo local" icon={<DatabaseIcon className="text-gray-500" size={16} />}>IndexedDB disponible</Status>
       </div>
+
+      <section className="border-t border-gray-200 pt-6">
+        <div className="flex items-center justify-between">
+          <div><h2 className="text-base font-semibold text-gray-950">Accesos rápidos</h2><p className="mt-1 text-sm text-gray-500">Continúa con una operación.</p></div>
+          <ArrowUpRight size={18} className="text-gray-400" />
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <QuickLink href="/ventas">Nueva venta</QuickLink>
+          <QuickLink href="/pedidos">Nueva cotización</QuickLink>
+          <QuickLink href="/clientes">Buscar cliente</QuickLink>
+        </div>
+      </section>
     </div>
   );
 };
+
+const Status = ({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) => (
+  <div className="border-b border-gray-200 pb-5 md:border-b-0 md:border-r md:pr-6 last:border-r-0">
+    <span className="text-xs font-medium uppercase tracking-[0.12em] text-gray-400">{label}</span>
+    <p className="mt-2 flex items-center gap-2 text-sm font-medium text-gray-900">{icon}{children}</p>
+  </div>
+);
+
+const QuickLink = ({ href, children }: { href: string; children: React.ReactNode }) => (
+  <a href={href} className="border border-gray-200 bg-white p-4 text-sm font-medium text-gray-900 transition hover:border-blue-300 hover:text-blue-700">{children}</a>
+);

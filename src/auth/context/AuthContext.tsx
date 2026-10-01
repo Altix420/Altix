@@ -1,22 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../../shared/lib/supabase';
-import type { Database } from '../../shared/types/database.types';
-
-type Profile = Database['public']['Tables']['profiles']['Row'];
-type Sucursal = Database['public']['Tables']['sucursales']['Row'];
-
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  profile: Profile | null;
-  sucursalActiva: Sucursal | null;
-  loading: boolean;
-  signOut: () => Promise<void>;
-  setSucursalActiva: (sucursal: Sucursal) => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext, type Profile, type Sucursal } from './auth-context';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -24,6 +9,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [sucursalActiva, setSucursalActiva] = useState<Sucursal | null>(null);
   const [loading, setLoading] = useState(true);
+  const profileRequestRef = useRef(0);
+
+  const fetchProfile = useCallback(async (userId: string) => {
+    const requestId = ++profileRequestRef.current;
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (requestId !== profileRequestRef.current) return;
+      if (profileData) setProfile(profileData);
+
+      const { data: sucursalData } = await supabase
+        .from('usuario_sucursal')
+        .select('sucursales(*)')
+        .eq('user_id', userId)
+        .order('sucursal_id', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (requestId !== profileRequestRef.current) return;
+      if (sucursalData && sucursalData.sucursales) {
+        setSucursalActiva(sucursalData.sucursales as unknown as Sucursal);
+      }
+    } catch (err) {
+      console.error('Error cargando datos del perfil:', err);
+    } finally {
+      if (requestId === profileRequestRef.current) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -43,8 +60,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        setProfile(null);
+        setSucursalActiva(null);
+        setLoading(true);
         fetchProfile(session.user.id);
       } else {
+        profileRequestRef.current += 1;
         setProfile(null);
         setSucursalActiva(null);
         setLoading(false);
@@ -52,34 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (profileData) setProfile(profileData);
-
-      const { data: sucursalData } = await supabase
-        .from('usuario_sucursal')
-        .select('sucursales(*)')
-        .eq('user_id', userId)
-        .limit(1)
-        .maybeSingle();
-
-      if (sucursalData && sucursalData.sucursales) {
-        setSucursalActiva(sucursalData.sucursales as unknown as Sucursal);
-      }
-    } catch (err) {
-      console.error('Error cargando datos del perfil:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchProfile]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -90,10 +84,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth debe ser usado dentro de un AuthProvider');
-  return context;
 };

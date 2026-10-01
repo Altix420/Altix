@@ -1,32 +1,27 @@
-# React + TypeScript + Vite
+# Altix: paquete de integración
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Este paquete convierte la construcción descrita en una base de integración para una aplicación TypeScript + Supabase. Está preparado para conectarse a las migraciones y tipos generados del proyecto Altix; no sustituye esos artefactos.
 
-Currently, two official plugins are available:
+## Incluye
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Un único cliente Supabase en `src/shared/supabase.ts`.
+- Sesión, login, logout y recuperación en `src/auth/auth.service.ts`.
+- Registro de venta mediante la RPC `registrar_venta`, con `operation_id` para doble clic y reintentos.
+- Política explícita para impedir ventas, pagos e inventario definitivos cuando no hay conexión.
+- Cliente para solicitar URLs firmadas de R2 y registrar metadata después de una carga exitosa.
+- Edge Function `r2-presigned-url` como frontera de credenciales privadas.
+- Matriz de integración y pendientes en `INTEGRACION.md`.
 
-## React Compiler
+## Arranque
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Copiar `.env.example` a `.env.local`.
+2. Colocar el archivo generado por Supabase en `src/shared/types/database.types.ts`.
+3. Revisar los nombres de columnas y parámetros de las RPC contra las migraciones reales.
+4. Instalar dependencias y ejecutar el chequeo de tipos:
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run typecheck
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Las operaciones definitivas deben ejecutarse contra RPC protegidas por RLS. El cliente nunca recibe credenciales de R2.

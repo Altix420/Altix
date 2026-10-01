@@ -16,6 +16,7 @@ ALTER TABLE sesiones_caja ENABLE ROW LEVEL SECURITY;
 -- Políticas de Lectura para usuarios autenticados
 CREATE POLICY "Permitir lectura a usuarios autenticados" ON profiles FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Permitir lectura de sucursales" ON sucursales FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Permitir lectura de asignaciones de sucursal" ON usuario_sucursal FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Permitir lectura de clientes" ON clientes FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Permitir lectura de categorias" ON categorias FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Permitir lectura de productos" ON productos FOR SELECT USING (auth.role() = 'authenticated');
