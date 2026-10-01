@@ -348,3 +348,11 @@ Esta evaluación usa como fuente de verdad el esquema local reproducible hasta l
 - El seed local ya contiene 3 sucursales, 3 Admin, 7 Vendor, 20 productos, 10 mayoristas, 5 diseños y 5 extras.
 - PWA local: manifest, redirect SPA y service worker de app shell versionados; no se cachean datos autoritativos ni R2.
 - Resultado honesto: **ALTIX V1 local está endurecido; producción real continúa NO LISTA** hasta cerrar Supabase PROD, R2 PROD, Netlify, restore y E2E financiero.
+
+## Addendum 033 - Cierre financiero de construcción
+
+- Las cuentas por cobrar ligadas únicamente a un pedido ya pueden recibir pagos antes de la venta final; la autorización se resuelve por la cartera del pedido y el pago conserva `operation_id`.
+- `saldo_favor` ahora tiene ledger con actor, referencia y operación idempotente. El método `saldo_favor` consume el saldo dentro de la misma transacción del pago.
+- Las devoluciones crean el movimiento de crédito a favor y un ajuste proporcional de comisión cuando existe comisión para la venta.
+- Los gastos registran el egreso físico al momento del desembolso. Si un gasto pendiente es rechazado, se conserva el egreso original y se registra un ingreso de reintegro; no se elimina historia.
+- La prueba autenticada local de estos recorridos pasó. La prueba contra PROD, R2, Netlify, backup/restore y la validación manual responsive siguen pendientes por requerir infraestructura externa.

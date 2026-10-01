@@ -11,6 +11,7 @@ export type Database = {
           id: string;
           monto_ajuste: number;
           motivo: string;
+          operation_id: string | null;
         };
         Insert: {
           aprobado_por?: string | null;
@@ -19,6 +20,7 @@ export type Database = {
           id?: string;
           monto_ajuste: number;
           motivo: string;
+          operation_id?: string | null;
         };
         Update: {
           aprobado_por?: string | null;
@@ -27,6 +29,7 @@ export type Database = {
           id?: string;
           monto_ajuste?: number;
           motivo?: string;
+          operation_id?: string | null;
         };
         Relationships: [
           {
@@ -1087,7 +1090,10 @@ export type Database = {
           estado: string;
           id: string;
           monto: number;
+          movimiento_caja_id: string | null;
+          movimiento_reintegro_id: string | null;
           observacion: string | null;
+          operation_id: string | null;
           registrado_por: string | null;
           sesion_caja_id: string | null;
           sucursal_id: string | null;
@@ -1102,7 +1108,10 @@ export type Database = {
           estado?: string;
           id?: string;
           monto: number;
+          movimiento_caja_id?: string | null;
+          movimiento_reintegro_id?: string | null;
           observacion?: string | null;
+          operation_id?: string | null;
           registrado_por?: string | null;
           sesion_caja_id?: string | null;
           sucursal_id?: string | null;
@@ -1117,7 +1126,10 @@ export type Database = {
           estado?: string;
           id?: string;
           monto?: number;
+          movimiento_caja_id?: string | null;
+          movimiento_reintegro_id?: string | null;
           observacion?: string | null;
+          operation_id?: string | null;
           registrado_por?: string | null;
           sesion_caja_id?: string | null;
           sucursal_id?: string | null;
@@ -1128,6 +1140,20 @@ export type Database = {
             columns: ["autorizado_por"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "gastos_movimiento_caja_id_fkey";
+            columns: ["movimiento_caja_id"];
+            isOneToOne: false;
+            referencedRelation: "movimientos_caja";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "gastos_movimiento_reintegro_id_fkey";
+            columns: ["movimiento_reintegro_id"];
+            isOneToOne: false;
+            referencedRelation: "movimientos_caja";
             referencedColumns: ["id"];
           },
           {
@@ -1526,7 +1552,9 @@ export type Database = {
           created_at: string | null;
           id: string;
           monto: number;
+          operation_id: string | null;
           referencia_id: string | null;
+          registrado_por: string | null;
           saldo_favor_id: string | null;
           tipo: string;
         };
@@ -1535,7 +1563,9 @@ export type Database = {
           created_at?: string | null;
           id?: string;
           monto: number;
+          operation_id?: string | null;
           referencia_id?: string | null;
+          registrado_por?: string | null;
           saldo_favor_id?: string | null;
           tipo: string;
         };
@@ -1544,11 +1574,20 @@ export type Database = {
           created_at?: string | null;
           id?: string;
           monto?: number;
+          operation_id?: string | null;
           referencia_id?: string | null;
+          registrado_por?: string | null;
           saldo_favor_id?: string | null;
           tipo?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "movimientos_saldo_favor_registrado_por_fkey";
+            columns: ["registrado_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "movimientos_saldo_favor_saldo_favor_id_fkey";
             columns: ["saldo_favor_id"];
@@ -2576,9 +2615,11 @@ export type Database = {
       altix_role: { Args: { p_user_id?: string }; Returns: string };
       aplicar_saldo_favor: {
         Args: {
+          p_actor_id?: string;
           p_cliente_id: string;
           p_concepto: string;
           p_monto: number;
+          p_operation_id?: string;
           p_referencia_id?: string;
         };
         Returns: undefined;
@@ -2817,6 +2858,7 @@ export type Database = {
           p_descripcion: string;
           p_monto: number;
           p_observacion?: string;
+          p_operation_id?: string;
           p_registrado_por: string;
           p_sesion_caja_id: string;
           p_sucursal_id: string;

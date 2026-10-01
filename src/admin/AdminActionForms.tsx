@@ -246,6 +246,7 @@ export const AdminActionButton: React.FC<{
           p_comprobante_url: text("comprobante_url"),
           p_registrado_por: profile.id,
           p_observacion: text("observacion") || undefined,
+          p_operation_id: createOperationId("gasto"),
         });
       if (action === "cash-movement")
         await adminService.registrarMovimientoCaja({
@@ -283,6 +284,7 @@ export const AdminActionButton: React.FC<{
           p_referencia: text("referencia"),
           p_registrado_por: profile.id,
           ...(sessionId ? { p_sesion_caja_id: sessionId } : {}),
+          p_operation_id: createOperationId("pago-credito"),
         });
       }
       if (action === "quote-convert")
@@ -382,6 +384,7 @@ export const AdminActionButton: React.FC<{
           p_motivo: text("motivo"),
           p_autorizado_por: profile.id,
           p_items: items as unknown as Json,
+          p_operation_id: createOperationId("devolucion"),
           p_fecha_operativa: text("fecha_operativa") || undefined,
         });
       }
