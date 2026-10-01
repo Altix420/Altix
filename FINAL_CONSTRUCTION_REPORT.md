@@ -43,10 +43,32 @@ The authenticated local cycle covered entry, transfer, defective registration wi
 - Manual responsive validation on desktop, tablet and mobile.
 - Final bundle performance review; Vite reports a 788 KB minified JS chunk.
 
+## Promotion Status
+
+| Block | Implemented locally | Deployed to PROD | Verified in PROD |
+|---|---|---|---|
+| Migration 033 | YES | YES | YES: remote history and RPC signatures confirmed |
+| Financial RPC lifecycle | YES | YES | YES: remote function signatures confirmed |
+| Edge Functions | YES | YES: already deployed | YES: downloaded remote source matches branch source |
+| Frontend final branch | YES | NO: branch only | NO: Netlify deployment not accessible from this CLI session |
+| Netlify environment variables | Config names documented | UNKNOWN | NO: CLI is not authenticated or site-linked |
+| R2 production runtime | Edge source ready | UNKNOWN | NO: secrets, bucket, CORS and PUT/GET not inspected |
+| Production backup | N/A | N/A | YES: encrypted dump created and checksum/decryption verified locally |
+
+## Production Backup Reference
+
+- Timestamp UTC: `20261001T191954Z`.
+- Encrypted artifact: `~/Library/Application Support/ALTIX/backups/altix-prod-20261001T191954Z.tar.gz.enc`.
+- SHA-256: `4a9ff5b5711bd203c52140150dba3792d3d62a86a0501831e078eac1e24ff576`.
+- Key reference: local Keychain service `altix-prod-backup-033`.
+- Restore process: retrieve the key from Keychain, decrypt with OpenSSL AES-256-CBC/PBKDF2, extract `schema.sql` and `data.sql`, restore only into an isolated Postgres/Supabase project, then validate counts and role access. A full isolated restore rehearsal remains pending.
+
 ## Construction Gate
 
 **CONSTRUCTION = COMPLETE FOR LOCAL VALIDATION**
 
-**PRODUCTION RELEASE = NOT AUTHORIZED YET**
+**PRODUCTION DATABASE MIGRATION = PROMOTED AND VERIFIED**
 
-The remaining items require access to the real deployment and explicit manual validation. They are recorded as gates rather than simulated as completed.
+**PRODUCTION FRONTEND RELEASE = NOT VERIFIED**
+
+The remaining frontend gates require Netlify site access: inspect production variable names/targets, create a Deploy Preview from `production-v1-finalization`, verify the preview, and only then merge to `main`. No merge was performed.
