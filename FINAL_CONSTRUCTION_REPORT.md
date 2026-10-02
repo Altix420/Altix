@@ -72,3 +72,15 @@ The authenticated local cycle covered entry, transfer, defective registration wi
 **PRODUCTION FRONTEND RELEASE = NOT VERIFIED**
 
 The remaining frontend gates require Netlify site access: inspect production variable names/targets, create a Deploy Preview from `production-v1-finalization`, verify the preview, and only then merge to `main`. No merge was performed.
+
+## R2 / DESIGN IMAGE PRODUCTION DEBUG
+
+- **Netlify commit:** NOT VERIFIED. Netlify CLI is not authenticated or site-linked in this environment.
+- **Production HTTP status and failing request:** NOT CAPTURED. The published site URL and DevTools session were not available here.
+- **Configuration issue found in branch code:** the frontend selected `altix-dev` when `VITE_R2_BUCKET` was absent, while the Edge Function could sign `altix-prod`. This could make the persisted metadata disagree with the bucket that received the object.
+- **Correction:** `src/storage/r2.service.ts` now uses the bucket returned by the signed-URL Edge Function and no longer requires `VITE_R2_BUCKET` in the frontend. `.env.example` no longer advertises that variable.
+- **Diagnostics added:** safe stage logs for compression, signed URL, R2 PUT and `registrar_archivo`, with status and truncated response details only; no URLs, signatures or credentials are logged.
+- **UI errors:** compression, signed URL, upload/CORS and metadata failures now have separate messages.
+- **JPEG approximately 2 MB:** NOT VERIFIED against Netlify PROD.
+- **WebP size, R2 object, Supabase metadata, Admin display and Vendor display:** NOT VERIFIED against Netlify PROD.
+- **Current evidence:** TypeScript, lint, build and diff checks pass locally. This fix is implemented but R2 is not marked production-closed until the real Netlify/Preview flow completes end to end.
