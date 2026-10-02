@@ -1,10 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { S3Client, PutObjectCommand, GetObjectCommand } from 'https://esm.sh/@aws-sdk/client-s3@3';
-import { getSignedUrl } from 'https://esm.sh/@aws-sdk/s3-request-presigner@3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from 'https://esm.sh/@aws-sdk/client-s3@3.1145.0';
+import { getSignedUrl } from 'https://esm.sh/@aws-sdk/s3-request-presigner@3.1145.0';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
 const allowedFolders = new Set(['disenos', 'lanzamientos', 'exports', 'auditoria', 'backups']);
@@ -30,7 +31,10 @@ const createR2Client = () => {
   return new S3Client({
     region: 'auto',
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: { accessKeyId, secretAccessKey }
+    credentials: { accessKeyId, secretAccessKey },
+    // R2 receives the browser's later PUT, so the presigned request must not
+    // contain an SDK-generated checksum for a body that is not present yet.
+    requestChecksumCalculation: 'WHEN_REQUIRED'
   });
 };
 

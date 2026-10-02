@@ -84,3 +84,31 @@ The remaining frontend gates require Netlify site access: inspect production var
 - **JPEG approximately 2 MB:** NOT VERIFIED against Netlify PROD.
 - **WebP size, R2 object, Supabase metadata, Admin display and Vendor display:** NOT VERIFIED against Netlify PROD.
 - **Current evidence:** TypeScript, lint, build and diff checks pass locally. This fix is implemented but R2 is not marked production-closed until the real Netlify/Preview flow completes end to end.
+
+## R2 / PRESIGNED PUT CHECKSUM-CORS FIX
+
+- **AWS SDK resolution:** the previous unpinned `@aws-sdk/client-s3@3` import resolved to `3.1145.0`; `@aws-sdk/s3-request-presigner@3` also resolved to `3.1145.0`.
+- **SDK capability check:** `@aws-sdk/client-s3@3.1145.0` exposes `requestChecksumCalculation` in its actual `S3Client` types.
+- **Cause addressed:** AWS SDK for JavaScript v3.729.0 and later can add a default CRC32 request checksum when no checksum is supplied. That checksum is incompatible with a presigned browser PUT when the signed request was created before the browser sends the real body.
+- **Change applied:** `supabase/functions/r2-presigned-url/index.ts` pins both AWS packages to `3.1145.0` and configures `requestChecksumCalculation: 'WHEN_REQUIRED'`. The PUT command remains limited to `Bucket`, `Key` and `ContentType`.
+- **Expected signed URL:** no `x-amz-checksum-crc32` or `x-amz-sdk-checksum-algorithm` parameters. The URL must retain the normal SigV4 fields and `x-id=PutObject`.
+- **Browser content type:** the client must continue sending exactly the signed type, including `Content-Type: image/webp` for compressed WebP uploads.
+- **R2 bucket CORS required:**
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://altixv1.netlify.app"],
+    "AllowedMethods": ["PUT", "GET", "HEAD"],
+    "AllowedHeaders": ["Content-Type"],
+    "ExposeHeaders": ["ETag"]
+  }
+]
+```
+
+- **CORS application status:** NOT VERIFIED/APPLIED from this workspace. R2 credentials and Cloudflare bucket administration are not available in the shell; this JSON must be applied to the production bucket by an authorized Cloudflare operator.
+- **Edge Function deployment status:** DEPLOYED to Supabase PROD as `r2-presigned-url` version 8; remote status is `ACTIVE` with JWT verification enabled. The deployed function passed the public `OPTIONS` and unauthenticated `401` smoke checks.
+- **Signed URL inspection status:** NOT COMPLETED. A valid Admin JWT is required to generate a URL without exposing production credentials; the public endpoint correctly rejects requests without authorization.
+- **Real PUT status:** NOT VERIFIED. No production Admin JWT and no fresh WebP test file/URL were available for a non-destructive `curl` or Netlify upload.
+- **Metadata/Admin/Vendor visibility:** NOT VERIFIED for the corrected upload path.
+- **Closure rule:** R2 remains open until a fresh URL is inspected, the URL has no automatic checksum parameters, a real `PUT` returns `200`/`204`, metadata registration succeeds, and the object is visible in both Admin and Vendor flows.
