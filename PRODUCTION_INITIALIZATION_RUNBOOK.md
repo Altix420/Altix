@@ -5,7 +5,7 @@ This runbook initializes a new ALTIX business configuration from the Admin panel
 ## Preconditions
 
 - Supabase PROD is linked to the intended project.
-- Migration `034_production_initialization.sql` is applied.
+- Migrations `034_production_initialization.sql` and `035_commercial_finalization_notifications.sql` are applied.
 - At least one administrator can sign in.
 - Cloudflare R2 and Netlify environment variables are configured separately.
 

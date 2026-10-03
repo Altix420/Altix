@@ -135,4 +135,5 @@ The remaining frontend gates require Netlify site access: inspect production var
 - **Approval responses:** PostgreSQL stores `solicitante_visto_at`, the Vendor marks resolved responses as seen when opening the view, and Admin/Vendor navigation badges read counts from PostgreSQL with Realtime refresh as an optimization.
 - **Financial dashboard:** Admin KPIs now distinguish net sales, cost of sales, gross profit, commissions and profit after commissions using Guatemala local dates and frozen `venta_costos` snapshots.
 - **Local acceptance:** controlled order confirmation passed with stock decrement and commission generation; reset, schema lint, diff, TypeScript, lint and build passed.
-- **PROD migration:** 035 is prepared for promotion after a fresh encrypted backup. No production business test records are created by this migration.
+- **PROD migration:** 035 applied and verified after a fresh encrypted backup. No production business test records were created by this migration.
+- **035 backup reference:** `~/Library/Application Support/ALTIX/backups/altix-prod-035-pre-20261003T190129Z.tar.gz.enc`; SHA-256 `8ec36eb541b0737ec064cee20d85b1ec2338cef8edc12df47663f2ac16620913`; captured at migration level 034 and decrypted/validated locally.
