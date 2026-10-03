@@ -137,3 +137,4 @@ The remaining frontend gates require Netlify site access: inspect production var
 - **Local acceptance:** controlled order confirmation passed with stock decrement and commission generation; reset, schema lint, diff, TypeScript, lint and build passed.
 - **PROD migration:** 035 applied and verified after a fresh encrypted backup. No production business test records were created by this migration.
 - **035 backup reference:** `~/Library/Application Support/ALTIX/backups/altix-prod-035-pre-20261003T190129Z.tar.gz.enc`; SHA-256 `8ec36eb541b0737ec064cee20d85b1ec2338cef8edc12df47663f2ac16620913`; captured at migration level 034 and decrypted/validated locally.
+- **Netlify smoke check:** the production URL responds `200`, but the served JavaScript asset is still older than commit `3d6a70b`; the new commercial UI is pushed to `main` and requires the Netlify build/deploy to finish before browser verification.
