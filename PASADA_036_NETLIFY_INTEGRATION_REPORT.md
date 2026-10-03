@@ -41,3 +41,9 @@ Por la misma razón no se hizo todavía:
 ## Resultado
 
 La integración queda **lista técnicamente y detenida antes de PROD** por falta de backup cifrado verificable. No se declaró E2E PROD PASS ni ALTIX terminado. Se requiere completar el backup/restore aprobado y proporcionar su referencia antes de continuar con `db push`, merge y Netlify.
+
+## Validación Netlify solicitada posteriormente
+
+La rama fue empujada a GitHub y el build local volvió a pasar. En esta sesión no hay `gh` ni Netlify CLI autenticados, tampoco se pudo crear el PR o confirmar un Deploy Preview desde una integración disponible. Por tanto no se publica ni se reporta una URL de Preview inexistente.
+
+Para exponer esta rama sin mergear, crear un PR `production-v1-finalization` hacia `main` en GitHub y usar el Deploy Preview que Netlify adjunte al PR. Ese Preview puede servir el frontend, pero mientras PROD siga en 035 las vistas que consulten `productos.unidad_venta` o snapshots 036 pueden fallar hasta aplicar la migración; ese comportamiento debe documentarse durante la validación y no ocultarse.
