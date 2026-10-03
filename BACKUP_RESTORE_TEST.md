@@ -1,6 +1,6 @@
 # ALTIX Backup and Restore Test
 
-Estado: **NO EJECUTADO**
+Estado: **BLOQUEADO PREVIO A EJECUCIÓN**
 
 ## Requisito
 
@@ -24,4 +24,6 @@ Un backup no es evidencia suficiente hasta que pueda restaurarse en un proyecto 
 
 ## Resultado actual
 
-La reconstrucción local con `supabase db reset` es PASS, pero no sustituye este restore test.
+La reconstrucción local con `supabase db reset` es PASS, pero no sustituye este restore test. El procedimiento reproducible quedó documentado en `PRODUCTION_BACKUP_RUNBOOK.md`.
+
+En la revisión del 2026-10-03 se verificó que `openssl` y `shasum` están disponibles, mientras `age` no está instalado. No se generó backup PROD porque aún faltan la conexión segura de base, la passphrase definida por el responsable y un proyecto Supabase temporal vacío para restore. PROD no fue modificado.
