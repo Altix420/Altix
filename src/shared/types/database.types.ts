@@ -264,13 +264,13 @@ isOneToOne: false
                   ]
                 },"cotizacion_items": {
                   Row: {
-                    "cantidad": number,"cotizacion_id": string | null,"descuento": number,"diseno_id": string | null,"extra_id": string | null,"id": string,"observaciones": string | null,"precio_unitario": number,"producto_id": string | null,"snapshot_economico": NonNullable<Json>,"subtotal": number
+                    "cantidad": number,"cotizacion_id": string | null,"descuento": number,"diseno_id": string | null,"extra_id": string | null,"id": string,"observaciones": string | null,"precio_unitario": number,"producto_id": string | null,"snapshot_economico": NonNullable<Json>,"subtotal": number,"unidad_venta_snapshot": string
                   }
                   Insert: {
-                    "cantidad"?: number,"cotizacion_id"?: string | null,"descuento"?: number,"diseno_id"?: string | null,"extra_id"?: string | null,"id"?: string,"observaciones"?: string | null,"precio_unitario": number,"producto_id"?: string | null,"snapshot_economico"?: NonNullable<Json>,"subtotal": number
+                    "cantidad"?: number,"cotizacion_id"?: string | null,"descuento"?: number,"diseno_id"?: string | null,"extra_id"?: string | null,"id"?: string,"observaciones"?: string | null,"precio_unitario": number,"producto_id"?: string | null,"snapshot_economico"?: NonNullable<Json>,"subtotal": number,"unidad_venta_snapshot"?: string
                   }
                   Update: {
-                    "cantidad"?: number,"cotizacion_id"?: string | null,"descuento"?: number,"diseno_id"?: string | null,"extra_id"?: string | null,"id"?: string,"observaciones"?: string | null,"precio_unitario"?: number,"producto_id"?: string | null,"snapshot_economico"?: NonNullable<Json>,"subtotal"?: number
+                    "cantidad"?: number,"cotizacion_id"?: string | null,"descuento"?: number,"diseno_id"?: string | null,"extra_id"?: string | null,"id"?: string,"observaciones"?: string | null,"precio_unitario"?: number,"producto_id"?: string | null,"snapshot_economico"?: NonNullable<Json>,"subtotal"?: number,"unidad_venta_snapshot"?: string
                   }
                   Relationships: [
                     {
@@ -923,13 +923,13 @@ isOneToOne: false
                   ]
                 },"pedido_items": {
                   Row: {
-                    "cantidad": number,"descuento": number,"diseno_id": string | null,"extra_id": string | null,"id": string,"observaciones": string | null,"pedido_id": string | null,"precio_unitario": number,"producto_id": string | null,"snapshot_economico": NonNullable<Json>,"subtotal": number
+                    "cantidad": number,"descuento": number,"diseno_id": string | null,"extra_id": string | null,"id": string,"observaciones": string | null,"pedido_id": string | null,"precio_unitario": number,"producto_id": string | null,"snapshot_economico": NonNullable<Json>,"subtotal": number,"unidad_venta_snapshot": string
                   }
                   Insert: {
-                    "cantidad"?: number,"descuento"?: number,"diseno_id"?: string | null,"extra_id"?: string | null,"id"?: string,"observaciones"?: string | null,"pedido_id"?: string | null,"precio_unitario": number,"producto_id"?: string | null,"snapshot_economico"?: NonNullable<Json>,"subtotal": number
+                    "cantidad"?: number,"descuento"?: number,"diseno_id"?: string | null,"extra_id"?: string | null,"id"?: string,"observaciones"?: string | null,"pedido_id"?: string | null,"precio_unitario": number,"producto_id"?: string | null,"snapshot_economico"?: NonNullable<Json>,"subtotal": number,"unidad_venta_snapshot"?: string
                   }
                   Update: {
-                    "cantidad"?: number,"descuento"?: number,"diseno_id"?: string | null,"extra_id"?: string | null,"id"?: string,"observaciones"?: string | null,"pedido_id"?: string | null,"precio_unitario"?: number,"producto_id"?: string | null,"snapshot_economico"?: NonNullable<Json>,"subtotal"?: number
+                    "cantidad"?: number,"descuento"?: number,"diseno_id"?: string | null,"extra_id"?: string | null,"id"?: string,"observaciones"?: string | null,"pedido_id"?: string | null,"precio_unitario"?: number,"producto_id"?: string | null,"snapshot_economico"?: NonNullable<Json>,"subtotal"?: number,"unidad_venta_snapshot"?: string
                   }
                   Relationships: [
                     {
@@ -997,13 +997,13 @@ isOneToOne: false
                   ]
                 },"productos": {
                   Row: {
-                    "activo": boolean | null,"categoria_id": string | null,"created_at": string | null,"descripcion": string | null,"id": string,"nombre": string,"precio_base": number,"precio_mayorista": number,"sku": string
+                    "activo": boolean | null,"categoria_id": string | null,"created_at": string | null,"descripcion": string | null,"id": string,"nombre": string,"precio_base": number,"precio_mayorista": number,"sku": string,"unidad_venta": string
                   }
                   Insert: {
-                    "activo"?: boolean | null,"categoria_id"?: string | null,"created_at"?: string | null,"descripcion"?: string | null,"id"?: string,"nombre": string,"precio_base"?: number,"precio_mayorista"?: number,"sku": string
+                    "activo"?: boolean | null,"categoria_id"?: string | null,"created_at"?: string | null,"descripcion"?: string | null,"id"?: string,"nombre": string,"precio_base"?: number,"precio_mayorista"?: number,"sku": string,"unidad_venta"?: string
                   }
                   Update: {
-                    "activo"?: boolean | null,"categoria_id"?: string | null,"created_at"?: string | null,"descripcion"?: string | null,"id"?: string,"nombre"?: string,"precio_base"?: number,"precio_mayorista"?: number,"sku"?: string
+                    "activo"?: boolean | null,"categoria_id"?: string | null,"created_at"?: string | null,"descripcion"?: string | null,"id"?: string,"nombre"?: string,"precio_base"?: number,"precio_mayorista"?: number,"sku"?: string,"unidad_venta"?: string
                   }
                   Relationships: [
                     {
@@ -1317,13 +1317,13 @@ isOneToOne: true
                   ]
                 },"venta_items": {
                   Row: {
-                    "cantidad": number,"descuento": number,"diseno_id": string | null,"extra_id": string | null,"id": string,"precio_unitario": number,"producto_id": string | null,"snapshot_economico": NonNullable<Json>,"subtotal": number,"venta_id": string | null
+                    "cantidad": number,"descuento": number,"diseno_id": string | null,"extra_id": string | null,"id": string,"precio_unitario": number,"producto_id": string | null,"snapshot_economico": NonNullable<Json>,"subtotal": number,"unidad_venta_snapshot": string,"venta_id": string | null
                   }
                   Insert: {
-                    "cantidad": number,"descuento"?: number,"diseno_id"?: string | null,"extra_id"?: string | null,"id"?: string,"precio_unitario": number,"producto_id"?: string | null,"snapshot_economico"?: NonNullable<Json>,"subtotal": number,"venta_id"?: string | null
+                    "cantidad": number,"descuento"?: number,"diseno_id"?: string | null,"extra_id"?: string | null,"id"?: string,"precio_unitario": number,"producto_id"?: string | null,"snapshot_economico"?: NonNullable<Json>,"subtotal": number,"unidad_venta_snapshot"?: string,"venta_id"?: string | null
                   }
                   Update: {
-                    "cantidad"?: number,"descuento"?: number,"diseno_id"?: string | null,"extra_id"?: string | null,"id"?: string,"precio_unitario"?: number,"producto_id"?: string | null,"snapshot_economico"?: NonNullable<Json>,"subtotal"?: number,"venta_id"?: string | null
+                    "cantidad"?: number,"descuento"?: number,"diseno_id"?: string | null,"extra_id"?: string | null,"id"?: string,"precio_unitario"?: number,"producto_id"?: string | null,"snapshot_economico"?: NonNullable<Json>,"subtotal"?: number,"unidad_venta_snapshot"?: string,"venta_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -1480,7 +1480,7 @@ isOneToOne: false
 { Args: { "p_archivo_id"?: string,"p_descripcion"?: string,"p_diseno_ids"?: Json,"p_extra_ids"?: Json,"p_fecha_lanzamiento"?: string,"p_imagen_path"?: string,"p_lanzamiento_id"?: string,"p_nombre"?: string,"p_precio"?: number }; Returns: string
                            },
 "guardar_producto":
-{ Args: { "p_activo"?: boolean,"p_admin_id"?: string,"p_categoria_id"?: string,"p_costo_unitario"?: number,"p_descripcion"?: string,"p_nombre"?: string,"p_precio_base"?: number,"p_precio_mayorista"?: number,"p_producto_id"?: string,"p_sku"?: string }; Returns: string
+{ Args: { "p_activo"?: boolean,"p_admin_id"?: string,"p_categoria_id"?: string,"p_costo_unitario"?: number,"p_descripcion"?: string,"p_nombre"?: string,"p_precio_base"?: number,"p_precio_mayorista"?: number,"p_producto_id"?: string,"p_sku"?: string,"p_unidad_venta"?: string }; Returns: string
                            },
 "guardar_sucursal":
 { Args: { "p_activa"?: boolean,"p_admin_id"?: string,"p_nombre"?: string,"p_sucursal_id"?: string }; Returns: string

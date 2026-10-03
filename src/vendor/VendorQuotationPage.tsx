@@ -6,9 +6,10 @@ import { friendlyAdminError } from "../admin/admin.errors";
 import { supabase } from "../shared/lib/supabase";
 import type { Json } from "../shared/types/database.types";
 import { vendorService } from "./vendor.service";
+import { formatQuantity, pricePerUnit, unitAllowsFraction, type SalesUnit } from "../shared/units";
 
 type Client = { id: string; nombre: string; nit_dpi: string | null; es_mayorista: boolean | null };
-type Product = { id: string; sku: string; nombre: string; precio_base: number; precio_mayorista: number };
+type Product = { id: string; sku: string; nombre: string; precio_base: number; precio_mayorista: number; unidad_venta: SalesUnit };
 type Design = { id: string; nombre: string; precio: number; producto_id: string | null };
 type Extra = { id: string; nombre: string; precio_adicional: number; activo: boolean | null };
 type QuoteLine = {
@@ -21,6 +22,7 @@ type QuoteLine = {
   precio_oficial: number;
   descuento: number;
   observaciones: string;
+  unidad_venta: SalesUnit;
 };
 const input = "w-full border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-600";
 const money = (value: number) => `Q ${value.toLocaleString("es-GT", { minimumFractionDigits: 2 })}`;
@@ -37,7 +39,7 @@ export const VendorQuotationPage: React.FC = () => {
   const [payment, setPayment] = useState<"efectivo" | "credito">("efectivo");
   const [validUntil, setValidUntil] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
   const [observations, setObservations] = useState("");
-  const [line, setLine] = useState<QuoteLine>({ producto_id: "", diseno_id: "", extra_ids: [], cantidad: 1, precio_unitario: 0, precio_negociado: 0, precio_oficial: 0, descuento: 0, observaciones: "" });
+  const [line, setLine] = useState<QuoteLine>({ producto_id: "", diseno_id: "", extra_ids: [], cantidad: 1, precio_unitario: 0, precio_negociado: 0, precio_oficial: 0, descuento: 0, observaciones: "", unidad_venta: "unidad" });
   const [lines, setLines] = useState<QuoteLine[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -50,7 +52,7 @@ export const VendorQuotationPage: React.FC = () => {
     let active = true;
     void Promise.all([
       supabase.from("clientes").select("id,nombre,nit_dpi,es_mayorista").eq("activo", true).order("nombre"),
-      supabase.from("productos").select("id,sku,nombre,precio_base,precio_mayorista").eq("activo", true).order("nombre"),
+      supabase.from("productos").select("id,sku,nombre,precio_base,precio_mayorista,unidad_venta").eq("activo", true).order("nombre"),
       supabase.from("disenos").select("id,nombre,precio,producto_id").eq("activo", true).order("nombre"),
       supabase.from("extras").select("id,nombre,precio_adicional,activo").eq("activo", true).order("nombre"),
     ]).then(([clientRows, productRows, designRows, extraRows]) => {
@@ -81,7 +83,7 @@ export const VendorQuotationPage: React.FC = () => {
   };
   const chooseProduct = (productId: string) => {
     const official = getOfficialPrice(productId, line.diseno_id, line.extra_ids);
-    setLine((current) => ({ ...current, producto_id: productId, precio_unitario: official, precio_negociado: official, precio_oficial: official, descuento: 0 }));
+    setLine((current) => ({ ...current, producto_id: productId, unidad_venta: products.find((product) => product.id === productId)?.unidad_venta ?? "unidad", precio_unitario: official, precio_negociado: official, precio_oficial: official, descuento: 0 }));
   };
   const chooseClient = (nextClientId: string) => {
     const nextClient = clients.find((client) => client.id === nextClientId);
@@ -95,8 +97,8 @@ export const VendorQuotationPage: React.FC = () => {
   const addLine = () => {
     setError(null);
     const negotiated = Number(line.precio_negociado);
-    if ((!line.producto_id && !line.diseno_id && line.extra_ids.length === 0) || !Number.isInteger(line.cantidad) || line.cantidad <= 0 || !Number.isFinite(negotiated) || negotiated < 0 || negotiated > line.precio_oficial || line.precio_oficial < 0) {
-      setError("Cada línea necesita producto, diseño o extra, cantidad entera y precio válido.");
+    if ((!line.producto_id && !line.diseno_id && line.extra_ids.length === 0) || line.cantidad <= 0 || (!unitAllowsFraction(line.unidad_venta) && !Number.isInteger(line.cantidad)) || !Number.isFinite(negotiated) || negotiated < 0 || negotiated > line.precio_oficial || line.precio_oficial < 0) {
+      setError("Cada línea necesita producto, diseño o extra, cantidad válida y precio válido.");
       return;
     }
     if (line.descuento > line.cantidad * line.precio_oficial) {
@@ -104,7 +106,7 @@ export const VendorQuotationPage: React.FC = () => {
       return;
     }
     setLines((current) => [...current, { ...line, precio_negociado: negotiated }]);
-    setLine({ producto_id: "", diseno_id: "", extra_ids: [], cantidad: 1, precio_unitario: 0, precio_negociado: 0, precio_oficial: 0, descuento: 0, observaciones: "" });
+    setLine({ producto_id: "", diseno_id: "", extra_ids: [], cantidad: 1, precio_unitario: 0, precio_negociado: 0, precio_oficial: 0, descuento: 0, observaciones: "", unidad_venta: "unidad" });
   };
   const createClient = async (event?: React.FormEvent) => {
     event?.preventDefault();
@@ -127,7 +129,7 @@ export const VendorQuotationPage: React.FC = () => {
     event.preventDefault();
     setError(null); setMessage(null);
     if (!user || !sucursalActiva || !clientId || lines.length === 0 || total <= 0) { setError("Selecciona cliente y agrega al menos una línea con total mayor a cero."); return; }
-    if (lines.some((item) => !Number.isInteger(item.cantidad) || item.cantidad < 1)) { setError("Las cantidades de productos deben ser enteras desde 1."); return; }
+    if (lines.some((item) => item.cantidad < 1 || (!unitAllowsFraction(item.unidad_venta) && !Number.isInteger(item.cantidad)))) { setError("Hay una cantidad inválida para la unidad de venta seleccionada."); return; }
     if (payment === "credito" && !selectedClient?.es_mayorista) { setError("El crédito solo está disponible para clientes mayoristas."); return; }
     if (totalDiscount > 0 && !approvalReason.trim()) { setError("Indica el motivo del descuento para solicitar aprobación."); return; }
     setSubmitting(true);
@@ -148,6 +150,7 @@ export const VendorQuotationPage: React.FC = () => {
             precio_adicional: Number(extras.find((extra) => extra.id === extraId)?.precio_adicional ?? 0),
           })),
           cantidad: item.cantidad,
+          unidad_venta: item.unidad_venta,
           precio_unitario: item.precio_oficial,
           descuento: item.descuento,
           observaciones: item.observaciones,
@@ -160,6 +163,7 @@ export const VendorQuotationPage: React.FC = () => {
               nombre: extras.find((extra) => extra.id === extraId)?.nombre ?? null,
               precio_adicional: Number(extras.find((extra) => extra.id === extraId)?.precio_adicional ?? 0),
             })),
+            unidad_venta: item.unidad_venta,
             precio_base_unitario: Number((item.precio_oficial - item.extra_ids.reduce((sum, extraId) => sum + Number(extras.find((extra) => extra.id === extraId)?.precio_adicional ?? 0), 0)).toFixed(2)),
             precio_oficial: item.precio_oficial,
             precio_negociado: Number(item.precio_negociado),
@@ -198,15 +202,15 @@ export const VendorQuotationPage: React.FC = () => {
             <label className="text-sm">Producto<select value={line.producto_id} onChange={(event) => chooseProduct(event.target.value)} className={`${input} mt-1`}><option value="">Sin producto</option>{products.map((product) => <option key={product.id} value={product.id}>{product.sku} · {product.nombre}</option>)}</select></label>
             <label className="text-sm">Diseño oficial<select value={line.diseno_id} onChange={(event) => { const designId = event.target.value; const official = getOfficialPrice(line.producto_id, designId, line.extra_ids); setLine({ ...line, diseno_id: designId, precio_unitario: official, precio_negociado: official, precio_oficial: official, descuento: 0 }); }} className={`${input} mt-1`}><option value="">Sin diseño</option>{designs.map((design) => <option key={design.id} value={design.id}>{design.nombre} · {money(design.precio)}</option>)}</select></label>
             <fieldset className="text-sm sm:col-span-2"><legend>Extras adicionales</legend><div className="mt-1 grid gap-2 border border-gray-200 p-3 sm:grid-cols-2">{extras.map((extra) => <label key={extra.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={line.extra_ids.includes(extra.id)} onChange={(event) => { const extraIds = event.target.checked ? [...line.extra_ids, extra.id] : line.extra_ids.filter((id) => id !== extra.id); const official = getOfficialPrice(line.producto_id, line.diseno_id, extraIds); setLine({ ...line, extra_ids: extraIds, precio_unitario: official, precio_negociado: official, precio_oficial: official, descuento: 0 }); }} /><span>{extra.nombre} · {money(extra.precio_adicional)}</span></label>)}</div></fieldset>
-            <label className="text-sm">Cantidad (unidades)<input type="number" min="1" step="1" value={line.cantidad} onChange={(event) => { const cantidad = Math.max(1, Math.trunc(Number(event.target.value) || 1)); setLine({ ...line, cantidad, descuento: Number(((line.precio_oficial - Number(line.precio_negociado || 0)) * cantidad).toFixed(2)) }); }} className={`${input} mt-1`} /></label>
+            <label className="text-sm">Cantidad ({line.unidad_venta})<input type="number" min="1" step={unitAllowsFraction(line.unidad_venta) ? "0.001" : "1"} inputMode={unitAllowsFraction(line.unidad_venta) ? "decimal" : "numeric"} value={line.cantidad} onChange={(event) => { const raw = Number(event.target.value); const cantidad = Number.isFinite(raw) ? Math.max(1, Number(raw.toFixed(3))) : 1; setLine({ ...line, cantidad, descuento: Number(((line.precio_oficial - Number(line.precio_negociado || 0)) * cantidad).toFixed(2)) }); }} className={`${input} mt-1`} /></label>
             <label className="text-sm">Precio oficial<input type="text" readOnly value={money(line.precio_oficial)} className={`${input} mt-1 bg-gray-50 text-gray-500`} /></label>
-            <label className="text-sm">Precio negociado<input type="number" min="0" step="0.01" value={line.precio_negociado} onChange={(event) => { const raw = event.target.value; const parsed = raw === "" ? 0 : Number(raw); const safe = Number.isFinite(parsed) ? Math.min(line.precio_oficial, Math.max(0, parsed)) : 0; setLine({ ...line, precio_unitario: safe, precio_negociado: raw, descuento: Number(((line.precio_oficial - safe) * line.cantidad).toFixed(2)) }); }} className={`${input} mt-1`} /></label>
+            <label className="text-sm">Precio negociado<input inputMode="decimal" type="number" min="0" step="0.01" value={line.precio_negociado} onChange={(event) => { const raw = event.target.value; const parsed = raw === "" ? 0 : Number(raw); const safe = Number.isFinite(parsed) ? Math.min(line.precio_oficial, Math.max(0, parsed)) : 0; setLine({ ...line, precio_unitario: safe, precio_negociado: raw, descuento: Number(((line.precio_oficial - safe) * line.cantidad).toFixed(2)) }); }} className={`${input} mt-1`} /></label>
             <label className="text-sm">Descuento total solicitado<input type="text" readOnly value={money(line.descuento)} className={`${input} mt-1 bg-gray-50 text-gray-500`} /></label>
             <label className="text-sm sm:col-span-2">Solicitud o detalle del diseño<textarea rows={2} value={line.observaciones} onChange={(event) => setLine({ ...line, observaciones: event.target.value })} placeholder="Para un diseño nuevo, describe aquí la solicitud." className={`${input} mt-1`} /></label>
           </div>
           <button type="button" onClick={addLine} className="mt-3 inline-flex items-center gap-2 border border-gray-300 px-3 py-2 text-sm font-medium"><Plus size={15} /> Agregar línea</button>
         </div>
-        <div className="border border-gray-200 bg-white"><div className="flex items-center justify-between border-b border-gray-200 px-4 py-3"><h2 className="font-semibold">Detalle</h2><span className="text-xs text-gray-500">{lines.length} líneas</span></div>{lines.length === 0 ? <p className="p-8 text-center text-sm text-gray-500">Agrega productos, diseños o extras.</p> : <div className="divide-y divide-gray-100">{lines.map((item, index) => <div key={`${item.producto_id}-${item.diseno_id}-${item.extra_ids.join("-")}-${index}`} className="flex items-start gap-3 p-4 text-sm"><div className="min-w-0 flex-1"><p className="font-medium">{products.find((product) => product.id === item.producto_id)?.nombre ?? designs.find((design) => design.id === item.diseno_id)?.nombre ?? "Línea"}</p><p className="text-xs text-gray-500">{item.cantidad} × {money(item.precio_oficial)}{item.extra_ids.length > 0 ? ` · ${item.extra_ids.length} extra(s)` : ""}{item.descuento > 0 ? ` · negociado ${money(Number(item.precio_negociado))} · descuento ${money(item.descuento)}` : ""}{item.observaciones ? ` · ${item.observaciones}` : ""}</p></div><span className="font-medium">{money(item.cantidad * item.precio_oficial - item.descuento)}</span><button type="button" title="Quitar línea" onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))} className="p-1 text-gray-400 hover:text-red-600"><X size={15} /></button></div>)}</div>}</div>
+        <div className="border border-gray-200 bg-white"><div className="flex items-center justify-between border-b border-gray-200 px-4 py-3"><h2 className="font-semibold">Detalle</h2><span className="text-xs text-gray-500">{lines.length} líneas</span></div>{lines.length === 0 ? <p className="p-8 text-center text-sm text-gray-500">Agrega productos, diseños o extras.</p> : <div className="divide-y divide-gray-100">{lines.map((item, index) => <div key={`${item.producto_id}-${item.diseno_id}-${item.extra_ids.join("-")}-${index}`} className="flex items-start gap-3 p-4 text-sm"><div className="min-w-0 flex-1"><p className="font-medium">{products.find((product) => product.id === item.producto_id)?.nombre ?? designs.find((design) => design.id === item.diseno_id)?.nombre ?? "Línea"}</p><p className="text-xs text-gray-500">{formatQuantity(item.cantidad, item.unidad_venta)} × {pricePerUnit(item.precio_oficial, item.unidad_venta)}{item.extra_ids.length > 0 ? ` · ${item.extra_ids.length} extra(s)` : ""}{item.descuento > 0 ? ` · negociado ${money(Number(item.precio_negociado))} · descuento ${money(item.descuento)}` : ""}{item.observaciones ? ` · ${item.observaciones}` : ""}</p></div><span className="font-medium">{money(item.cantidad * item.precio_oficial - item.descuento)}</span><button type="button" title="Quitar línea" onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))} className="min-h-11 min-w-11 p-1 text-gray-400 hover:text-red-600"><X size={15} /></button></div>)}</div>}</div>
       </div>
       <aside className="h-fit space-y-4 border border-gray-200 bg-white p-5 lg:sticky lg:top-6"><label className="block text-sm">Válida hasta<input required type="date" value={validUntil} min={new Date().toISOString().slice(0, 10)} onChange={(event) => setValidUntil(event.target.value)} className={`${input} mt-1`} /></label><label className="block text-sm">Forma de pago<select value={payment} onChange={(event) => setPayment(event.target.value as "efectivo" | "credito")} className={`${input} mt-1`}><option value="efectivo">Efectivo / transferencia</option>{selectedClient?.es_mayorista && <option value="credito">Crédito mayorista</option>}</select></label><label className="block text-sm">Observaciones<textarea rows={3} value={observations} onChange={(event) => setObservations(event.target.value)} className={`${input} mt-1`} /></label>{totalDiscount > 0 && <div className="space-y-3 border-t border-gray-200 pt-4"><p className="text-sm font-semibold">Solicitud administrativa del descuento</p><p className="border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">La cotización se guarda primero y queda pendiente de aprobación. Administración debe aprobarla antes de convertirla en pedido.</p><textarea required rows={3} value={approvalReason} onChange={(event) => setApprovalReason(event.target.value)} placeholder="Motivo obligatorio del descuento" className={input} /></div>}<div className="border-t border-gray-200 pt-4"><p className="text-xs uppercase tracking-wide text-gray-400">Total</p><p className="mt-1 text-3xl font-semibold">{money(total)}</p></div><button type="submit" disabled={submitting || lines.length === 0 || !clientId} className="flex w-full items-center justify-center gap-2 bg-blue-700 px-4 py-3 text-sm font-medium text-white disabled:opacity-50"><Save size={16} />{submitting ? "Guardando..." : totalDiscount > 0 ? "Guardar y solicitar autorización" : "Guardar cotización"}</button></aside>
     </form>

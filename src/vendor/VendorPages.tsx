@@ -25,6 +25,7 @@ import { getSignedR2Url } from "../storage/r2.service";
 import { PrintDocumentButton } from "../shared/printing/PrintDocumentButton";
 import { VendorAnalyticsDashboard } from "./VendorAnalyticsDashboard";
 import type { Database } from "../shared/types/database.types";
+import { formatQuantity, pricePerUnit, unitAllowsFraction, type SalesUnit } from "../shared/units";
 
 type Row = Record<string, unknown>;
 type Product = {
@@ -36,6 +37,7 @@ type Product = {
   precio_mayorista: number;
   activo: boolean | null;
   stock: number;
+  unidad_venta: SalesUnit;
 };
 type Client = {
   id: string;
@@ -56,6 +58,7 @@ type CartItem = {
   cantidad: number;
   precio_unitario: number;
   stock: number;
+  unidad_venta: SalesUnit;
 };
 type SaleSuccess = {
   id: string;
@@ -478,6 +481,10 @@ export const VendorPosPage: React.FC = () => {
   );
   const addItem = () => {
     if (!selectedProduct || quantity <= 0) return;
+    if (!unitAllowsFraction(selectedProduct.unidad_venta) && !Number.isInteger(quantity)) {
+      setError("Esta unidad solo admite cantidades enteras.");
+      return;
+    }
     const existing = cart.find((item) => item.producto_id === selectedProduct.id);
     const nextQuantity = (existing?.cantidad ?? 0) + quantity;
     if (nextQuantity > selectedProduct.stock) {
@@ -500,6 +507,7 @@ export const VendorPosPage: React.FC = () => {
                 ? selectedProduct.precio_mayorista
                 : selectedProduct.precio_base,
               stock: selectedProduct.stock,
+              unidad_venta: selectedProduct.unidad_venta ?? "unidad",
             },
           ],
     );
@@ -512,7 +520,7 @@ export const VendorPosPage: React.FC = () => {
     setCart((previous) =>
       previous.map((item) =>
         item.producto_id === id
-          ? { ...item, cantidad: Math.min(item.stock, Math.max(1, item.cantidad + delta)) }
+          ? { ...item, cantidad: Math.min(item.stock, Math.max(item.unidad_venta === "unidad" || item.unidad_venta === "docena" || item.unidad_venta === "paquete" || item.unidad_venta === "rollo" ? 1 : 0.001, Number((item.cantidad + delta).toFixed(3)))) }
           : item,
       ),
     );
@@ -703,13 +711,14 @@ export const VendorPosPage: React.FC = () => {
                       </span>
                       <span className="shrink-0 text-right">
                         <span className="block font-medium">
-                          {money(
+                          {pricePerUnit(
                             selectedClient?.es_mayorista
                               ? product.precio_mayorista
                               : product.precio_base,
+                            product.unidad_venta,
                           )}
                         </span>
-                        <span className="block text-xs text-gray-500">Stock {product.stock}</span>
+                        <span className="block text-xs text-gray-500">Stock {formatQuantity(product.stock, product.unidad_venta)}</span>
                       </span>
                     </button>
                   ))}
@@ -726,7 +735,8 @@ export const VendorPosPage: React.FC = () => {
                       required
                       min="1"
                       max={selectedProduct.stock}
-                      step="1"
+                      step={selectedProduct.unidad_venta === "metro" || selectedProduct.unidad_venta === "yarda" ? "0.001" : "1"}
+                      inputMode={selectedProduct.unidad_venta === "metro" || selectedProduct.unidad_venta === "yarda" ? "decimal" : "numeric"}
                       type="number"
                       value={quantity}
                       onChange={(event) => setQuantity(Number(event.target.value))}
@@ -759,25 +769,25 @@ export const VendorPosPage: React.FC = () => {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{item.nombre}</p>
                         <p className="text-xs text-gray-500">
-                          {item.sku} · {money(item.precio_unitario)} c/u
+                          {item.sku} · {pricePerUnit(item.precio_unitario, item.unidad_venta)}
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
                           title="Reducir cantidad"
-                          onClick={() => changeQuantity(item.producto_id, -1)}
-                          className="p-1.5 text-gray-500 hover:bg-gray-100"
+                          onClick={() => changeQuantity(item.producto_id, item.unidad_venta === "metro" || item.unidad_venta === "yarda" ? -0.001 : -1)}
+                          className="min-h-11 min-w-11 p-1.5 text-gray-500 hover:bg-gray-100"
                         >
                           <Minus size={15} />
                         </button>
-                        <span className="min-w-7 text-center text-sm">{item.cantidad}</span>
+                        <span className="min-w-16 text-center text-sm">{formatQuantity(item.cantidad, item.unidad_venta)}</span>
                         <button
                           type="button"
                           title="Aumentar cantidad"
                           disabled={item.cantidad >= item.stock}
-                          onClick={() => changeQuantity(item.producto_id, 1)}
-                          className="p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30"
+                          onClick={() => changeQuantity(item.producto_id, item.unidad_venta === "metro" || item.unidad_venta === "yarda" ? 0.001 : 1)}
+                          className="min-h-11 min-w-11 p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30"
                         >
                           <Plus size={15} />
                         </button>
@@ -947,8 +957,8 @@ const DetailModal: React.FC<{ title: string; onClose: () => void; children: Reac
   onClose,
   children,
 }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/30 p-4">
-    <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto border border-gray-200 bg-white p-5 shadow-xl">
+  <div className="fixed inset-0 z-50 flex items-end justify-center bg-gray-950/30 p-0 sm:items-center sm:p-4">
+    <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto border border-gray-200 bg-white p-5 shadow-xl sm:max-h-[90vh]">
       <div className="mb-5 flex items-center justify-between border-b border-gray-200 pb-4">
         <h2 className="font-semibold text-gray-950">{title}</h2>
         <button
@@ -1309,7 +1319,8 @@ export const VendorListPage: React.FC<{ module: string }> = ({ module }) => {
       ) : filtered.length === 0 ? (
         <State>No hay registros para mostrar.</State>
       ) : (
-        <div className="overflow-x-auto border border-gray-200 bg-white">
+        <>
+        <div className="hidden overflow-x-auto border border-gray-200 bg-white md:block">
           <table className="w-full min-w-[680px] text-left text-sm">
             <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500">
               <tr>
@@ -1367,6 +1378,29 @@ export const VendorListPage: React.FC<{ module: string }> = ({ module }) => {
             </tbody>
           </table>
         </div>
+        <div className="space-y-3 md:hidden">
+          {filtered.map((row, index) => (
+            <article key={String(row.id ?? index)} className="border border-gray-200 bg-white p-4">
+              <div className="space-y-2">
+                {config.columns.slice(0, 4).map(([label, key]) => (
+                  <div key={label} className="flex items-start justify-between gap-3 text-sm">
+                    <span className="shrink-0 text-xs uppercase tracking-wide text-gray-400">{label}</span>
+                    <span className="min-w-0 text-right text-gray-700">{key === "archivo_url" ? <SignedImage path={row[key]} /> : key === "id" ? `#${shortId(row[key])}` : key === "monto_pagado" ? money(Number(row.monto_total ?? 0) - Number(row.saldo_pendiente ?? 0)) : display(row, key)}</span>
+                  </div>
+                ))}
+              </div>
+              {(canDetail || canAddToSale || canQuoteActions || canFinancialActions || module === "ventas" || module === "pedidos" || module === "cotizaciones") && <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+                {canDetail && <button type="button" onClick={() => setDetailRow(row)} className="inline-flex min-h-11 items-center gap-1 px-2 text-sm font-medium text-blue-700"><Eye size={15} /> Ver detalle</button>}
+                {canAddToSale && !row.catalogo_tipo && <button type="button" onClick={() => navigate("/vendedor/venta", { state: { productId: row.id } })} className="inline-flex min-h-11 items-center gap-1 px-2 text-sm font-medium text-blue-700"><ShoppingCart size={15} /> Agregar</button>}
+                {canQuoteActions && <QuoteActions row={row} onDone={() => void load()} />}
+                {module === "credito" && <VendorFinancialAction mode="credit" row={row} onDone={() => void load()} />}
+                {module === "pedidos" && <><VendorFinancialAction mode="advance" row={row} onDone={() => void load()} /><ConfirmOrderAction row={row} onDone={() => void load()} /></>}
+                {(module === "ventas" || module === "pedidos" || (module === "cotizaciones" && !["pendiente", "rechazada"].includes(String(row.aprobacion_descuento)))) && <PrintDocumentButton kind={module === "ventas" ? "sale" : module === "cotizaciones" ? "quotation" : "order"} documentId={String(row.id)} />}
+              </div>}
+            </article>
+          ))}
+        </div>
+        </>
       )}
       {detailRow && module === "ventas" && (
         <SaleDetail row={detailRow} onClose={() => setDetailRow(null)} />
