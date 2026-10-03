@@ -6,6 +6,7 @@ import { AdminRoute } from './admin/AdminRoute';
 import { AdminCatalogPage, AdminDashboard, AdminListPage } from './admin/AdminPages';
 import { AdminConfigurationPage } from './admin/AdminConfigurationPage';
 import { AdminGoalsPage } from './admin/AdminGoalsPage';
+import { AdminBranchesPage, AdminProductsPage, AdminVendorsPage } from './admin/AdminInitializationPages';
 import { Layout } from './shared/components/Layout';
 import { Login } from './auth/pages/Login';
 import { VendorRoute } from './vendor/VendorRoute';
@@ -33,7 +34,7 @@ export function App() {
       <Route element={<AdminRoute />}><Route element={<Layout />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/catalogo" element={<AdminCatalogPage />} />
-        {adminModules.map(([module, path]) => <Route key={path} path={path} element={module === 'configuracion' ? <AdminConfigurationPage /> : module === 'metas' ? <AdminGoalsPage /> : <AdminListPage module={module} />} />)}
+        {adminModules.map(([module, path]) => <Route key={path} path={path} element={module === 'configuracion' ? <AdminConfigurationPage /> : module === 'metas' ? <AdminGoalsPage /> : module === 'sucursales' ? <AdminBranchesPage /> : module === 'vendedores' ? <AdminVendorsPage /> : module === 'productos' ? <AdminProductsPage /> : <AdminListPage module={module} />} />)}
       </Route></Route>
       <Route element={<VendorRoute />}><Route element={<VendorLayout />}>
         <Route path="/vendedor/inicio" element={<VendorDashboard />} />

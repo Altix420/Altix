@@ -1149,20 +1149,59 @@ const loadResource = async (module: string, userId: string, branchId?: string) =
       .eq("vendedor_id", userId)
       .order("created_at", { ascending: false });
   if (module === "catalogo")
-    return supabase.from("productos").select("*").eq("activo", true).order("nombre");
+  {
+    const [productResult, designResult] = await Promise.all([
+      supabase.from("productos").select("*").eq("activo", true).order("nombre"),
+      supabase.from("disenos").select("id,sku,nombre,precio,activo,archivo_url").eq("activo", true).order("nombre"),
+    ]);
+    const failed = [productResult, designResult].find((result) => result.error);
+    if (failed?.error) return { data: null, error: failed.error };
+    const products = (productResult.data ?? []) as Row[];
+    const designs = (designResult.data ?? []) as Row[];
+    return {
+      data: [
+        ...products,
+        ...designs.map((design) => ({
+          id: `design-${String(design.id)}`,
+          sku: design.sku ?? "DISEÑO",
+          nombre: design.nombre,
+          precio_base: design.precio,
+          catalogo_tipo: "Diseño",
+          design_id: design.id,
+          archivo_url: design.archivo_url,
+          activo: design.activo,
+        })),
+      ],
+      error: null,
+    };
+  }
   if (module === "disenos")
     return supabase
       .from("disenos")
       .select("*, clientes(nombre), categorias(nombre)")
+      .eq("activo", true)
       .order("created_at", { ascending: false });
   if (module === "extras")
     return supabase.from("extras").select("*").eq("activo", true).order("nombre");
   if (module === "inventario")
-    return supabase
-      .from("inventarios")
-      .select("*, productos(nombre,sku), sucursales(nombre)")
-      .eq("sucursal_id", branchId ?? "")
-      .order("stock");
+  {
+    if (!branchId) return { data: [], error: null };
+    const [productResult, inventoryResult, branchResult] = await Promise.all([
+      supabase.from("productos").select("id,nombre,sku,activo").eq("activo", true).order("nombre"),
+      supabase.from("inventarios").select("producto_id,stock,stock_minimo,stock_maximo").eq("sucursal_id", branchId),
+      supabase.from("sucursales").select("id,nombre").eq("id", branchId).maybeSingle(),
+    ]);
+    const failed = [productResult, inventoryResult, branchResult].find((result) => result.error);
+    if (failed?.error) return { data: null, error: failed.error };
+    const inventory = new Map((inventoryResult.data ?? []).map((row) => [row.producto_id, row]));
+    return {
+      data: ((productResult.data ?? []) as Row[]).map((product) => {
+        const stock = inventory.get(String(product.id));
+        return { ...stock, producto_id: product.id, sucursal_id: branchId, productos: product, sucursales: branchResult.data ?? { id: branchId, nombre: "Sucursal activa" }, stock: stock?.stock ?? 0, stock_minimo: stock?.stock_minimo ?? 5, stock_maximo: stock?.stock_maximo ?? 1000 };
+      }),
+      error: null,
+    };
+  }
   if (module === "credito")
     return supabase
       .from("cuentas_cobrar")
@@ -1275,7 +1314,7 @@ export const VendorListPage: React.FC<{ module: string }> = ({ module }) => {
                       </button>
                     </td>
                   )}
-                  {canAddToSale && (
+                  {canAddToSale && !row.catalogo_tipo && (
                     <td className="px-4 py-3">
                       <button
                         type="button"

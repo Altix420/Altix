@@ -57,6 +57,9 @@ export const adminService = {
   registrarAceptacionCotizacion: (args: FunctionArgs<"registrar_aceptacion_cotizacion">) =>
     call("registrar_aceptacion_cotizacion", args),
   guardarDiseno: (args: FunctionArgs<"guardar_diseno">) => call("guardar_diseno", { ...args, p_extra_ids: args.p_extra_ids as Json }),
+  guardarSucursal: (args: FunctionArgs<"guardar_sucursal">) => call("guardar_sucursal", args),
+  configurarVendedor: (args: FunctionArgs<"configurar_vendedor">) => call("configurar_vendedor", args),
+  guardarProducto: (args: FunctionArgs<"guardar_producto">) => call("guardar_producto", args),
   guardarLanzamiento: (args: FunctionArgs<"guardar_lanzamiento">) => call("guardar_lanzamiento", { ...args, p_diseno_ids: args.p_diseno_ids as Json, p_extra_ids: args.p_extra_ids as Json }),
   configurarMeta: (args: FunctionArgs<"configurar_meta_vendedor">) => call("configurar_meta_vendedor", args),
   configurarMetaSucursal: (args: FunctionArgs<"configurar_meta_sucursal">) => call("configurar_meta_sucursal", args),

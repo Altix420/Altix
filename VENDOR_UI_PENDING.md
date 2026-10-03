@@ -5,7 +5,7 @@
 - Crear contratos explícitos para anticipos y entregas Vendor si el negocio debe permitirlos.
 - Crear entidades/RPC para metas, notificaciones y solicitudes de aprobación.
 - Crear servicio de impresión/PDF basado en registros reales.
-- Definir backend Auth administrativo para creación y mantenimiento de vendedores.
+- La creación de credenciales Auth sigue siendo operativa en Supabase Auth; Admin ya puede completar el perfil, activar/desactivar y asignar la sucursal mediante RPC.
 
 La bandeja de solicitudes, el flujo de aprobación de descuentos y el registro interno de aceptación de cotizaciones ya están implementados sobre RPC/RLS reales. La comunicación externa sigue fuera de alcance porque no existe proveedor de notificaciones.
 
@@ -23,7 +23,7 @@ La cuenta local `vendedor1@altix.local` ya está sembrada y fue validada contra 
 
 El alcance de demo está cerrado sobre datos reales: login, dashboard, consulta de catálogo/diseños/extras/inventario, clientes, POS de contado, venta idempotente, stock, caja y comisión. No se muestran controles que pretendan resolver los pendientes anteriores.
 
-**VENDOR DEMO READY = YES**
+**VENDOR DEMO READY = YES**, condicionado a que el usuario tenga una sucursal activa asignada.
 
 ## COMMERCIAL V1 PASS
 

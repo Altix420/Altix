@@ -280,12 +280,18 @@ async function loadRows(resource: Resource): Promise<AdminRow[]> {
       }));
     }
     case "inventarios": {
-      const result = await supabase
-        .from("inventarios")
-        .select("*, productos(nombre, sku, activo, precio_base, categorias(nombre), productos_costos(costo_unitario)), sucursales(nombre)")
-        .order("stock");
-      if (result.error) throw result.error;
-      return rows(result.data);
+      const [productResult, branchResult, inventoryResult] = await Promise.all([
+        supabase.from("productos").select("id,nombre,sku,activo,precio_base,categorias(nombre),productos_costos(costo_unitario)").eq("activo", true).order("nombre"),
+        supabase.from("sucursales").select("id,nombre").eq("activa", true).order("nombre"),
+        supabase.from("inventarios").select("sucursal_id,producto_id,stock,stock_minimo,stock_maximo"),
+      ]);
+      const failed = [productResult, branchResult, inventoryResult].find((result) => result.error);
+      if (failed?.error) throw failed.error;
+      const inventory = new Map((inventoryResult.data ?? []).map((row) => [`${row.sucursal_id}:${row.producto_id}`, row]));
+      return (productResult.data ?? []).flatMap((product) => (branchResult.data ?? []).map((branch) => {
+        const stock = inventory.get(`${branch.id}:${product.id}`);
+        return { ...stock, sucursal_id: branch.id, producto_id: product.id, productos: product, sucursales: branch, stock: stock?.stock ?? 0, stock_minimo: stock?.stock_minimo ?? 5, stock_maximo: stock?.stock_maximo ?? 1000 };
+      }));
     }
     case "sesiones_caja": {
       const result = await supabase

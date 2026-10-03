@@ -2666,6 +2666,16 @@ export type Database = {
         };
         Returns: string;
       };
+      configurar_vendedor: {
+        Args: {
+          p_activo?: boolean;
+          p_admin_id?: string;
+          p_nombre_completo?: string;
+          p_sucursal_id?: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
       convertir_cotizacion_pedido: { Args: { p_cotizacion_id: string }; Returns: string };
       crear_cliente_mayorista: {
         Args: {
@@ -2730,6 +2740,30 @@ export type Database = {
           p_lanzamiento_id?: string;
           p_nombre?: string;
           p_precio?: number;
+        };
+        Returns: string;
+      };
+      guardar_producto: {
+        Args: {
+          p_activo?: boolean;
+          p_admin_id?: string;
+          p_categoria_id?: string;
+          p_costo_unitario?: number;
+          p_descripcion?: string;
+          p_nombre?: string;
+          p_precio_base?: number;
+          p_precio_mayorista?: number;
+          p_producto_id?: string;
+          p_sku?: string;
+        };
+        Returns: string;
+      };
+      guardar_sucursal: {
+        Args: {
+          p_activa?: boolean;
+          p_admin_id?: string;
+          p_nombre?: string;
+          p_sucursal_id?: string;
         };
         Returns: string;
       };

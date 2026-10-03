@@ -2,8 +2,8 @@
 
 La fase de Inventario + Caja V1 quedó conectada a contratos reales. Esta lista conserva únicamente brechas que no pertenecen a esos flujos:
 
-- Administración Auth completa de vendedores, roles y asignaciones de sucursal.
-- Configuración empresarial editable; la vista actual solo muestra perfil y sucursales reales.
+- Creación de credenciales Auth desde la interfaz: por seguridad sigue siendo un procedimiento de Supabase Auth; la configuración de perfil, estado y asignación de sucursal ya está conectada desde Admin > Vendedores.
+- Configuración empresarial avanzada fuera del contrato actual; sucursales, estado activo y productos/SKU ya cuentan con flujo administrativo real.
 - Lanzamientos de catálogo; falta una entidad de negocio y sus RPC.
 - Aprobación externa de cotizaciones por cliente; falta identidad/portal/RPC de cliente.
 - Reportes financieros avanzados fuera de la descarga operativa de inventario.

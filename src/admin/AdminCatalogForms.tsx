@@ -351,13 +351,14 @@ export const AdminDesignsPage: React.FC = () => {
                   ))}
                 </select>
               </Field>
-              <Field label="Producto vendible / SKU">
+              <Field label="Producto vendible / SKU *">
                 <select
+                  required
                   name="producto_id"
                   defaultValue={editing?.producto_id ?? ""}
                   className={inputClass}
                 >
-                  <option value="">Sin SKU vinculado</option>
+                  <option value="">Selecciona el SKU vendible</option>
                   {products.map((product) => (
                     <option key={product.id} value={product.id}>
                       {product.sku} · {product.nombre}

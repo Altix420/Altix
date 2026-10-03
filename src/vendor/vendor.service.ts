@@ -59,7 +59,14 @@ export const vendorService = {
   solicitarCredito: (args: FunctionArgs<'solicitar_credito_cliente'>) => supabase.rpc('solicitar_credito_cliente', args).then(({ error }) => { if (error) throw new Error(error.message); }),
   crearClienteMayorista: (args: FunctionArgs<'crear_cliente_mayorista'>) => supabase.rpc('crear_cliente_mayorista', args).then(({ data, error }) => { if (error) throw new Error(error.message); return data as string; }),
   async crearCliente(input: { nombre: string; nit_dpi?: string; telefono?: string; direccion?: string; es_mayorista: boolean }) {
-    const { data, error } = await supabase.from('clientes').insert({ ...input, nit_dpi: input.nit_dpi || null, telefono: input.telefono || null, direccion: input.direccion || null }).select('id').single();
+    const { data, error } = await supabase.from('clientes').insert({
+      nombre: input.nombre.trim(),
+      nit_dpi: input.nit_dpi?.trim() || null,
+      telefono: input.telefono?.trim() || null,
+      direccion: input.direccion?.trim() || null,
+      es_mayorista: input.es_mayorista,
+      monto_solicitado: 0,
+    }).select('id').single();
     if (error) throw error;
     return data.id;
   }

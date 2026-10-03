@@ -35,10 +35,10 @@ The authenticated local cycle covered entry, transfer, defective registration wi
 
 ## Not Yet Proven In This Phase
 
-- Supabase PROD migration application and real RLS tests with one Admin and multiple Vendor accounts.
+- Real RLS tests with one Admin and multiple Vendor accounts.
 - Cloudflare R2 PROD bucket, secrets, CORS, PUT and signed GET verification.
 - Netlify HTTPS deployment, environment variables and SPA refresh smoke test.
-- Backup creation and a real restore rehearsal.
+- Full isolated restore rehearsal.
 - Browser E2E across Admin/Vendor roles and multiple branches.
 - Manual responsive validation on desktop, tablet and mobile.
 - Final bundle performance review; Vite reports a 788 KB minified JS chunk.
@@ -48,6 +48,7 @@ The authenticated local cycle covered entry, transfer, defective registration wi
 | Block | Implemented locally | Deployed to PROD | Verified in PROD |
 |---|---|---|---|
 | Migration 033 | YES | YES | YES: remote history and RPC signatures confirmed |
+| Migration 034 initialization contracts | YES | YES | YES: remote history confirmed; no business seed data inserted |
 | Financial RPC lifecycle | YES | YES | YES: remote function signatures confirmed |
 | Edge Functions | YES | YES: already deployed | YES: downloaded remote source matches branch source |
 | Frontend final branch | YES | NO: branch only | NO: Netlify deployment not accessible from this CLI session |
@@ -57,9 +58,10 @@ The authenticated local cycle covered entry, transfer, defective registration wi
 
 ## Production Backup Reference
 
-- Timestamp UTC: `20261001T191954Z`.
-- Encrypted artifact: `~/Library/Application Support/ALTIX/backups/altix-prod-20261001T191954Z.tar.gz.enc`.
-- SHA-256: `4a9ff5b5711bd203c52140150dba3792d3d62a86a0501831e078eac1e24ff576`.
+- Timestamp UTC: `20261003T054518Z`.
+- Encrypted artifact: `~/Library/Application Support/ALTIX/backups/altix-prod-20261003T054518Z.tar.gz.enc`.
+- SHA-256: `8c01e927071537a7d87c9fa2b6800e20ce4b816c614174c0903ab529310924a9`.
+- Captured migration level: `033`, immediately before applying migration 034.
 - Key reference: local Keychain service `altix-prod-backup-033`.
 - Restore process: retrieve the key from Keychain, decrypt with OpenSSL AES-256-CBC/PBKDF2, extract `schema.sql` and `data.sql`, restore only into an isolated Postgres/Supabase project, then validate counts and role access. A full isolated restore rehearsal remains pending.
 
@@ -67,7 +69,7 @@ The authenticated local cycle covered entry, transfer, defective registration wi
 
 **CONSTRUCTION = COMPLETE FOR LOCAL VALIDATION**
 
-**PRODUCTION DATABASE MIGRATION = PROMOTED AND VERIFIED**
+**PRODUCTION DATABASE MIGRATIONS 001-034 = PROMOTED AND VERIFIED**
 
 **PRODUCTION FRONTEND RELEASE = NOT VERIFIED**
 
@@ -112,3 +114,14 @@ The remaining frontend gates require Netlify site access: inspect production var
 - **Real PUT status:** NOT VERIFIED. No production Admin JWT and no fresh WebP test file/URL were available for a non-destructive `curl` or Netlify upload.
 - **Metadata/Admin/Vendor visibility:** NOT VERIFIED for the corrected upload path.
 - **Closure rule:** R2 remains open until a fresh URL is inspected, the URL has no automatic checksum parameters, a real `PUT` returns `200`/`204`, metadata registration succeeds, and the object is visible in both Admin and Vendor flows.
+
+## PRODUCTION INITIALIZATION PASS - 2026-10-02
+
+- **PROD audit:** 0 branches, 2 profiles (`1 administrador`, `1 vendedor`), 0 branch assignments, 0 products, 0 inventory rows, 0 extras, and 2 designs. No sensitive identifiers are recorded here.
+- **Migration 034:** added backend contracts for branch save/deactivation, Auth-backed vendor assignment, and product plus cost creation. Existing migrations 001-033 were not modified.
+- **Initialization bug fixed:** the first inventory entry now records `stock_anterior = 0` instead of `NULL`, creates the inventory row, and writes the Kardex movement atomically.
+- **Admin UI:** branch CRUD without physical deletion, vendor assignment/configuration, and product/SKU creation are connected to the new RPCs.
+- **Vendor UI:** vendors without a branch are blocked with an actionable message; final-client creation no longer sends an empty numeric credit field; negotiated prices preserve temporary input values; active designs appear in Catalog; zero-stock products remain visible in inventory while POS still blocks sale quantity above stock.
+- **Local acceptance:** `supabase db reset`, `supabase db lint --local`, `supabase db diff --local`, TypeScript, lint, build, and a controlled RPC initialization test passed locally.
+- **PROD deployment:** Migration 034 APPLIED and verified after a fresh encrypted backup. No temporary production business records were inserted during this pass.
+- **PROD initialization data:** NOT CREATED. Real branches, Auth users, assignments, products, and opening stock must be entered by the client through the runbook.
