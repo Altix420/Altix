@@ -21,6 +21,11 @@ export const vendorService = {
       if (error) throw new Error(error.message);
       return data as string;
     }),
+  confirmarPedidoVenta: (args: FunctionArgs<'confirmar_pedido_venta'>) =>
+    supabase.rpc('confirmar_pedido_venta', args).then(({ data, error }) => {
+      if (error) throw new Error(error.message);
+      return data as string;
+    }),
   cancelarCotizacionRechazada: async (p_cotizacion_id: string) => {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData.user?.id;

@@ -24,6 +24,7 @@ import { createOperationId } from "../shared/operation-id";
 import { getSignedR2Url } from "../storage/r2.service";
 import { PrintDocumentButton } from "../shared/printing/PrintDocumentButton";
 import { VendorAnalyticsDashboard } from "./VendorAnalyticsDashboard";
+import type { Database } from "../shared/types/database.types";
 
 type Row = Record<string, unknown>;
 type Product = {
@@ -979,7 +980,7 @@ const SaleDetail: React.FC<{ row: Row; onClose: () => void }> = ({ row, onClose 
     let active = true;
     void supabase
       .from("venta_items")
-      .select("cantidad,precio_unitario,subtotal,productos(nombre,sku)")
+      .select("cantidad,precio_unitario,subtotal,productos(nombre,sku,disenos(id,archivo_url))")
       .eq("venta_id", String(row.id))
       .then((result) => {
         if (!active) return;
@@ -1022,6 +1023,7 @@ const SaleDetail: React.FC<{ row: Row; onClose: () => void }> = ({ row, onClose 
                   className="flex items-center justify-between gap-3 py-3 text-sm"
                 >
                   <div>
+                    <div className="mb-2"><SignedImage path={product && Array.isArray(product.disenos) ? (product.disenos as Row[])[0]?.archivo_url : undefined} /></div>
                     <p className="font-medium">{String(product?.nombre ?? "Producto")}</p>
                     <p className="text-xs text-gray-500">
                       {String(product?.sku ?? "—")} · {item.cantidad as number} ×{" "}
@@ -1118,6 +1120,35 @@ const VendorFinancialAction: React.FC<{ mode: "credit" | "advance"; row: Row; on
   };
   return <><button type="button" onClick={() => setOpen(true)} className="text-xs font-medium text-blue-700">{mode === "credit" ? "Registrar pago" : "Registrar anticipo"}</button>{open && <DetailModal title={mode === "credit" ? "Pago de crédito" : "Anticipo de pedido"} onClose={() => { if (!saving) setOpen(false); }}><form onSubmit={submit} className="space-y-3"><label className="block text-sm">Monto *<input name="monto" required min="0.01" max={String(row.saldo_pendiente ?? "")} step="0.01" type="number" className={`${input} mt-1`} /></label><label className="block text-sm">Forma de pago<select name="forma_pago" required className={`${input} mt-1`}><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="tarjeta">Tarjeta</option><option value="saldo_favor">Saldo a favor</option></select></label><label className="block text-sm">Caja abierta para efectivo<select name="sesion_caja_id" className={`${input} mt-1`}><option value="">Selecciona si es efectivo</option>{sessions.map((session) => <option key={session.id} value={session.id}>Caja abierta · {date(session.fecha_apertura)}</option>)}</select></label><label className="block text-sm">Referencia<input name="referencia" className={`${input} mt-1`} /></label>{error && <p className="border border-red-200 bg-red-50 p-2 text-sm text-red-700">{error}</p>}<button type="submit" disabled={saving} className="w-full bg-blue-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">{saving ? "Guardando..." : mode === "credit" ? "Registrar pago" : "Registrar anticipo"}</button></form></DetailModal>}</>;
 };
+
+const ConfirmOrderAction: React.FC<{ row: Row; onDone: () => void }> = ({ row, onDone }) => {
+  const { user } = useAuth();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const saldo = Number(row.saldo_pendiente ?? 0);
+  if (['entregado', 'cancelado'].includes(String(row.estado)) || saldo > 0) {
+    return saldo > 0 && !['entregado', 'cancelado'].includes(String(row.estado))
+      ? <span className="text-xs text-gray-500">Pendiente de pago</span>
+      : <span className="text-xs text-green-700">Venta finalizada</span>;
+  }
+  const confirm = async () => {
+    if (!user) return;
+    setSaving(true); setError(null);
+    try {
+      await vendorService.confirmarPedidoVenta({
+        p_pedido_id: String(row.id),
+        p_forma_pago: String(row.metodo_pago ?? 'efectivo') as Database['public']['Enums']['metodo_pago'],
+        p_monto_recibido: 0,
+        p_operation_id: createOperationId('confirmar-pedido'),
+        p_confirmado_por: user.id,
+      });
+      onDone();
+    } catch (err) {
+      setError(friendlyAdminError(err, 'No se pudo confirmar la venta.'));
+    } finally { setSaving(false); }
+  };
+  return <div className="flex flex-wrap items-center gap-2"><button type="button" disabled={saving} onClick={() => void confirm()} className="text-xs font-medium text-blue-700 disabled:opacity-50">{saving ? 'Confirmando...' : 'Confirmar venta'}</button>{error && <span className="text-xs text-red-700">{error}</span>}</div>;
+};
 const loadResource = async (module: string, userId: string, branchId?: string) => {
   if (module === "ventas")
     return supabase
@@ -1187,7 +1218,7 @@ const loadResource = async (module: string, userId: string, branchId?: string) =
   {
     if (!branchId) return { data: [], error: null };
     const [productResult, inventoryResult, branchResult] = await Promise.all([
-      supabase.from("productos").select("id,nombre,sku,activo").eq("activo", true).order("nombre"),
+      supabase.from("productos").select("id,nombre,sku,activo,disenos(id,archivo_url)").eq("activo", true).order("nombre"),
       supabase.from("inventarios").select("producto_id,stock,stock_minimo,stock_maximo").eq("sucursal_id", branchId),
       supabase.from("sucursales").select("id,nombre").eq("id", branchId).maybeSingle(),
     ]);
@@ -1296,7 +1327,7 @@ export const VendorListPage: React.FC<{ module: string }> = ({ module }) => {
                 <tr key={String(row.id ?? index)}>
                   {config.columns.map(([label, key]) => (
                     <td key={label} className="max-w-[250px] truncate px-4 py-3 text-gray-700">
-                      {key === "archivo_url" ? <SignedImage path={row[key]} /> : key === "id"
+                      {key === "archivo_url" ? <SignedImage path={row[key]} /> : key === "productos" ? <div className="flex items-center gap-2"><SignedImage path={Array.isArray(row[key] && typeof row[key] === "object" ? (row[key] as Row).disenos : null) ? ((row[key] as Row).disenos as Row[])[0]?.archivo_url : undefined} />{display(row, key)}</div> : key === "id"
                         ? `#${shortId(row[key])}`
                         : key === "monto_pagado"
                           ? money(Number(row.monto_total ?? 0) - Number(row.saldo_pendiente ?? 0))
@@ -1329,7 +1360,7 @@ export const VendorListPage: React.FC<{ module: string }> = ({ module }) => {
                   )}
                   {canQuoteActions && <td className="px-4 py-3"><QuoteActions row={row} onDone={() => void load()} /></td>}
                   {module === "credito" && <td className="px-4 py-3"><VendorFinancialAction mode="credit" row={row} onDone={() => void load()} /></td>}
-                  {module === "pedidos" && <td className="px-4 py-3"><VendorFinancialAction mode="advance" row={row} onDone={() => void load()} /></td>}
+                  {module === "pedidos" && <td className="px-4 py-3"><div className="space-y-2"><VendorFinancialAction mode="advance" row={row} onDone={() => void load()} /><ConfirmOrderAction row={row} onDone={() => void load()} /></div></td>}
                   {(module === "ventas" || module === "pedidos" || (module === "cotizaciones" && !["pendiente", "rechazada"].includes(String(row.aprobacion_descuento)))) && <td className="px-4 py-3"><PrintDocumentButton kind={module === "ventas" ? "sale" : module === "cotizaciones" ? "quotation" : "order"} documentId={String(row.id)} /></td>}
                 </tr>
               ))}

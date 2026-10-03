@@ -30,9 +30,10 @@ export const AdminGoalsPage: React.FC = () => {
     setGoals((goalRows.data ?? []) as Goal[]);
     setSellerGoals((sellerRows.data ?? []) as SellerGoal[]);
     const failed = [branchRows, goalRows, sellerRows].find((result) => result.error);
-    if (failed?.error) setError(friendlyAdminError(failed.error, "No se pudieron cargar las metas."));
-    else setError(null);
+    if (failed?.error) { setError(friendlyAdminError(failed.error, "No se pudieron cargar las metas.")); setLoading(false); return false; }
+    setError(null);
     setLoading(false);
+    return true;
   }, []);
   useEffect(() => { void load(); }, [load]);
   const save = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -40,13 +41,23 @@ export const AdminGoalsPage: React.FC = () => {
     if (!profile?.id) return;
     const form = new FormData(event.currentTarget);
     const total = Number(form.get("objetivo_ventas"));
-    if (!Number.isFinite(total) || total < 0) { setError("La meta total debe ser un número válido."); return; }
+    if (!Number.isFinite(total) || total < 0) { setError("La meta total debe ser un número válido."); setSuccess(null); return; }
+    if (String(form.get("periodo_inicio")) > String(form.get("periodo_fin"))) { setError("El inicio no puede ser posterior al fin."); setSuccess(null); return; }
     setSaving(true); setError(null); setSuccess(null);
     try {
       await adminService.configurarMetaSucursal({ p_sucursal_id: String(form.get("sucursal_id")), p_periodo_inicio: String(form.get("periodo_inicio")), p_periodo_fin: String(form.get("periodo_fin")), p_objetivo_ventas: total, p_activa: form.get("activa") === "on", p_admin_id: profile.id });
       setSuccess("Meta de sucursal guardada y distribuida entre vendedores activos.");
       event.currentTarget.reset();
-      await load();
+      try {
+        const refreshed = await load();
+        if (!refreshed) {
+          setError("Meta guardada, pero no se pudo actualizar la vista.");
+          setSuccess(null);
+        }
+      } catch {
+        setError("Meta guardada, pero no se pudo actualizar la vista.");
+        setSuccess(null);
+      }
     } catch (err) { setError(friendlyAdminError(err, "No se pudo guardar la meta de sucursal.")); }
     finally { setSaving(false); }
   };

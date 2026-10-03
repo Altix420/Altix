@@ -125,3 +125,14 @@ The remaining frontend gates require Netlify site access: inspect production var
 - **Local acceptance:** `supabase db reset`, `supabase db lint --local`, `supabase db diff --local`, TypeScript, lint, build, and a controlled RPC initialization test passed locally.
 - **PROD deployment:** Migration 034 APPLIED and verified after a fresh encrypted backup. No temporary production business records were inserted during this pass.
 - **PROD initialization data:** NOT CREATED. Real branches, Auth users, assignments, products, and opening stock must be entered by the client through the runbook.
+
+## FINAL COMMERCIAL CLOSURE PASS - 2026-10-03
+
+- **Meta UX:** save state now clears stale messages; a successful RPC shows only success, an RPC failure shows only error, and a refresh failure reports that the meta was saved but the view could not refresh.
+- **Images:** Vendor inventory and sale detail resolve the existing R2 metadata through product-to-design relationships, with a neutral empty state when no image exists.
+- **Order closure:** migration 035 adds `confirmar_pedido_venta`, allowing the assigned Vendor or Admin to finalize an order only after its remaining balance is zero. The RPC locks the order and inventory, creates the sale and item snapshots, records delivery, inventory movement, cash payment when applicable, and commission atomically.
+- **Idempotency:** order-to-sale has a unique constraint and operation identifiers; repeated confirmation returns the existing sale instead of duplicating financial effects.
+- **Approval responses:** PostgreSQL stores `solicitante_visto_at`, the Vendor marks resolved responses as seen when opening the view, and Admin/Vendor navigation badges read counts from PostgreSQL with Realtime refresh as an optimization.
+- **Financial dashboard:** Admin KPIs now distinguish net sales, cost of sales, gross profit, commissions and profit after commissions using Guatemala local dates and frozen `venta_costos` snapshots.
+- **Local acceptance:** controlled order confirmation passed with stock decrement and commission generation; reset, schema lint, diff, TypeScript, lint and build passed.
+- **PROD migration:** 035 is prepared for promotion after a fresh encrypted backup. No production business test records are created by this migration.

@@ -26,7 +26,11 @@ export const VendorApprovalsPage: React.FC = () => {
     setLoading(true); setError(null);
     const result = await supabase.from("aprobaciones").select("id,tipo,estado,motivo,valor_solicitado,created_at,revisado_at,nota_resolucion").eq("solicitante_id", user.id).order("created_at", { ascending: false });
     if (result.error) { setError(friendlyAdminError(result.error, "No se pudieron cargar tus solicitudes.")); setRows([]); }
-    else setRows((result.data ?? []) as Approval[]);
+    else {
+      setRows((result.data ?? []) as Approval[]);
+      const seen = await supabase.rpc("marcar_aprobaciones_vistas");
+      if (seen.error) setError(friendlyAdminError(seen.error, "No se pudieron marcar las respuestas como vistas."));
+    }
     setLoading(false);
   }, [user]);
   useEffect(() => { void load(); }, [load]);
