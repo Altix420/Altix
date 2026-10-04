@@ -86,7 +86,7 @@ Limitación: el dump no está cifrado y todavía no se ha ejecutado una restaura
 | R2 / imágenes | IMPLEMENTADO / PENDIENTE VALIDACIÓN MANUAL | 037 aplicada y Edge Function desplegada; falta confirmar upload real de producto en PROD |
 | Backup / restore | PENDIENTE | Dump creado; falta restore probado y política de cifrado |
 | Configuración inicial cliente | PENDIENTE | Crear sucursal, productos, costos, usuarios y reglas reales |
-| Deploy del cambio CSV e imágenes | PENDIENTE | La rama tiene el cambio; falta integrar a `main` y verificar el deploy Netlify |
+| Deploy del cambio CSV e imágenes | IMPLEMENTADO / PENDIENTE VALIDACIÓN MANUAL | `main` en 4448f4e y bundle público confirmado en Netlify |
 
 ## Comparación con el plan operativo
 

@@ -71,6 +71,9 @@ El dump de datos está vacío porque PROD estaba limpio; se conserva como eviden
 
 ## Estado de publicación
 
-El cambio está listo para commit e integración a `main`. La URL pública y el commit publicado en Netlify deben confirmarse después del deploy automático de `main`.
+- Commit integrado y publicado en `main`: `4448f4e`.
+- Netlify PROD responde `200` en [https://altixv1.netlify.app/](https://altixv1.netlify.app/).
+- El bundle público contiene `Descargar ventas CSV` e `Imagen principal`, confirmando que la publicación incluye esta pasada.
+- La validación de login y upload real de producto todavía requiere interacción manual con credenciales.
 
 No se modificaron comisiones, crédito, caja, RLS financiera, cierre de pedidos, KPIs, reportes CSV ni unidades 036.
