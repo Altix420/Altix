@@ -26,6 +26,7 @@ import { PrintDocumentButton } from "../shared/printing/PrintDocumentButton";
 import { VendorAnalyticsDashboard } from "./VendorAnalyticsDashboard";
 import type { Database } from "../shared/types/database.types";
 import { formatQuantity, pricePerUnit, unitAllowsFraction, type SalesUnit } from "../shared/units";
+import { ProductImage, type ProductImageSource } from "../shared/product-images";
 
 type Row = Record<string, unknown>;
 type Product = {
@@ -38,6 +39,9 @@ type Product = {
   activo: boolean | null;
   stock: number;
   unidad_venta: SalesUnit;
+  archivo_id: string | null;
+  archivos?: { path?: string | null } | null;
+  disenos?: Array<{ archivo_url?: string | null; archivos?: { path?: string | null } | null }> | null;
 };
 type Client = {
   id: string;
@@ -393,7 +397,7 @@ export const VendorPosPage: React.FC = () => {
     if (!user || !sucursalActiva) return;
     setLoading(true);
     const [productRows, inventoryRows, clientRows, sessions] = await Promise.all([
-      supabase.from("productos").select("*").eq("activo", true).order("nombre"),
+      supabase.from("productos").select("*,archivos(path),disenos(archivo_url,archivo_id,archivos(path))").eq("activo", true).order("nombre"),
       supabase.from("inventarios").select("producto_id,stock").eq("sucursal_id", sucursalActiva.id),
       supabase.from("clientes").select("*").eq("activo", true).order("nombre"),
       supabase
@@ -705,9 +709,9 @@ export const VendorPosPage: React.FC = () => {
                       }}
                       className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-blue-50"
                     >
-                      <span>
-                        <strong>{product.nombre}</strong>
-                        <span className="ml-2 text-xs text-gray-500">{product.sku}</span>
+                      <span className="flex min-w-0 items-center gap-3">
+                        <ProductImage product={product as ProductImageSource} alt={product.nombre} className="h-12 w-12" />
+                        <span className="min-w-0"><strong>{product.nombre}</strong><span className="ml-2 text-xs text-gray-500">{product.sku}</span></span>
                       </span>
                       <span className="shrink-0 text-right">
                         <span className="block font-medium">
@@ -728,7 +732,7 @@ export const VendorPosPage: React.FC = () => {
                 </div>
               )}
               {selectedProduct && (
-                <div className="mt-3 flex flex-col gap-3 border-t border-gray-100 pt-3 sm:flex-row sm:items-end">
+                <div className="mt-3 flex flex-col gap-3 border-t border-gray-100 pt-3 sm:flex-row sm:items-end"><ProductImage product={selectedProduct as ProductImageSource} alt={selectedProduct.nombre} className="h-20 w-20" />
                   <label className="flex-1 text-sm">
                     Cantidad
                     <input
@@ -766,6 +770,7 @@ export const VendorPosPage: React.FC = () => {
                 <div className="divide-y divide-gray-100">
                   {cart.map((item) => (
                     <div key={item.producto_id} className="flex items-center gap-3 p-4">
+                      <ProductImage product={products.find((product) => product.id === item.producto_id) as ProductImageSource | undefined} alt={item.nombre} className="h-14 w-14" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{item.nombre}</p>
                         <p className="text-xs text-gray-500">
@@ -890,6 +895,7 @@ const resourceConfig: Record<
     title: "Catálogo",
     description: "Productos activos disponibles para venta.",
     columns: [
+      ["Imagen", "imagen"],
       ["SKU", "sku"],
       ["Producto", "nombre"],
       ["Precio", "precio_base"],
@@ -1192,8 +1198,8 @@ const loadResource = async (module: string, userId: string, branchId?: string) =
   if (module === "catalogo")
   {
     const [productResult, designResult] = await Promise.all([
-      supabase.from("productos").select("*").eq("activo", true).order("nombre"),
-      supabase.from("disenos").select("id,sku,nombre,precio,activo,archivo_url").eq("activo", true).order("nombre"),
+      supabase.from("productos").select("*,archivos(path),disenos(archivo_url,archivo_id,archivos(path))").eq("activo", true).order("nombre"),
+      supabase.from("disenos").select("id,sku,nombre,precio,activo,archivo_url,archivo_id,archivos(path)").eq("activo", true).order("nombre"),
     ]);
     const failed = [productResult, designResult].find((result) => result.error);
     if (failed?.error) return { data: null, error: failed.error };
@@ -1228,7 +1234,7 @@ const loadResource = async (module: string, userId: string, branchId?: string) =
   {
     if (!branchId) return { data: [], error: null };
     const [productResult, inventoryResult, branchResult] = await Promise.all([
-      supabase.from("productos").select("id,nombre,sku,activo,disenos(id,archivo_url)").eq("activo", true).order("nombre"),
+      supabase.from("productos").select("id,nombre,sku,activo,archivo_id,archivos(path),disenos(id,archivo_url,archivo_id,archivos(path))").eq("activo", true).order("nombre"),
       supabase.from("inventarios").select("producto_id,stock,stock_minimo,stock_maximo").eq("sucursal_id", branchId),
       supabase.from("sucursales").select("id,nombre").eq("id", branchId).maybeSingle(),
     ]);
@@ -1338,7 +1344,7 @@ export const VendorListPage: React.FC<{ module: string }> = ({ module }) => {
                 <tr key={String(row.id ?? index)}>
                   {config.columns.map(([label, key]) => (
                     <td key={label} className="max-w-[250px] truncate px-4 py-3 text-gray-700">
-                      {key === "archivo_url" ? <SignedImage path={row[key]} /> : key === "productos" ? <div className="flex items-center gap-2"><SignedImage path={Array.isArray(row[key] && typeof row[key] === "object" ? (row[key] as Row).disenos : null) ? ((row[key] as Row).disenos as Row[])[0]?.archivo_url : undefined} />{display(row, key)}</div> : key === "id"
+                      {key === "imagen" ? <ProductImage product={row as ProductImageSource} alt={String(row.nombre ?? "Producto")} className="h-14 w-14" /> : key === "archivo_url" ? <SignedImage path={row[key]} /> : key === "productos" ? <div className="flex items-center gap-2"><ProductImage product={(row[key] as ProductImageSource) ?? null} alt={String((row[key] as Row)?.nombre ?? "Producto")} className="h-12 w-12" />{display(row, key)}</div> : key === "id"
                         ? `#${shortId(row[key])}`
                         : key === "monto_pagado"
                           ? money(Number(row.monto_total ?? 0) - Number(row.saldo_pendiente ?? 0))
@@ -1385,7 +1391,7 @@ export const VendorListPage: React.FC<{ module: string }> = ({ module }) => {
                 {config.columns.slice(0, 4).map(([label, key]) => (
                   <div key={label} className="flex items-start justify-between gap-3 text-sm">
                     <span className="shrink-0 text-xs uppercase tracking-wide text-gray-400">{label}</span>
-                    <span className="min-w-0 text-right text-gray-700">{key === "archivo_url" ? <SignedImage path={row[key]} /> : key === "id" ? `#${shortId(row[key])}` : key === "monto_pagado" ? money(Number(row.monto_total ?? 0) - Number(row.saldo_pendiente ?? 0)) : display(row, key)}</span>
+                    <span className="min-w-0 text-right text-gray-700">{key === "imagen" ? <ProductImage product={row as ProductImageSource} alt={String(row.nombre ?? "Producto")} className="h-14 w-14" /> : key === "archivo_url" ? <SignedImage path={row[key]} /> : key === "id" ? `#${shortId(row[key])}` : key === "monto_pagado" ? money(Number(row.monto_total ?? 0) - Number(row.saldo_pendiente ?? 0)) : display(row, key)}</span>
                   </div>
                 ))}
               </div>

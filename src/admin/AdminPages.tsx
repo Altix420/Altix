@@ -10,6 +10,7 @@ import { adminService } from "./admin.service";
 import { useAuth } from "../auth/hooks/useAuth";
 import { AdminProfitDashboardPage, AdminReportsPage } from "./AdminAnalyticsPages";
 import { PrintDocumentButton } from "../shared/printing/PrintDocumentButton";
+import { ProductImage, type ProductImageSource } from "../shared/product-images";
 
 type AdminRow = Record<string, unknown>;
 type Branch = { id: string; nombre: string };
@@ -272,7 +273,7 @@ async function loadRows(resource: Resource): Promise<AdminRow[]> {
       return rows(result.data);
     }
     case "productos": {
-      const result = await supabase.from("productos").select("*, productos_costos(costo_unitario)").order("nombre");
+      const result = await supabase.from("productos").select("*, archivos(path), disenos(archivo_url,archivo_id,archivos(path)), productos_costos(costo_unitario)").order("nombre");
       if (result.error) throw result.error;
       return rows(result.data).map((row) => ({
         ...row,
@@ -281,7 +282,7 @@ async function loadRows(resource: Resource): Promise<AdminRow[]> {
     }
     case "inventarios": {
       const [productResult, branchResult, inventoryResult] = await Promise.all([
-        supabase.from("productos").select("id,nombre,sku,activo,precio_base,categorias(nombre),productos_costos(costo_unitario)").eq("activo", true).order("nombre"),
+        supabase.from("productos").select("id,nombre,sku,activo,precio_base,archivo_id,archivos(path),disenos(archivo_url,archivo_id,archivos(path)),categorias(nombre),productos_costos(costo_unitario)").eq("activo", true).order("nombre"),
         supabase.from("sucursales").select("id,nombre").eq("activa", true).order("nombre"),
         supabase.from("inventarios").select("sucursal_id,producto_id,stock,stock_minimo,stock_maximo"),
       ]);
@@ -504,6 +505,7 @@ const configs: Record<
     description: "Catálogo, precios y disponibilidad comercial.",
     resource: "productos",
     columns: [
+      ["Imagen", "imagen"],
       ["Código", "sku"],
       ["Nombre", "nombre"],
       ["Precio base", "precio_base"],
@@ -518,6 +520,7 @@ const configs: Record<
     description: "Existencias por sucursal y producto.",
     resource: "inventarios",
     columns: [
+      ["Imagen", "imagen"],
       ["Producto", "productos"],
       ["Sucursal", "sucursales"],
       ["Stock", "stock"],
@@ -866,7 +869,7 @@ const AdminSaleDetail: React.FC<{ row: AdminRow; onClose: () => void }> = ({ row
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
-    void supabase.from("venta_items").select("id,cantidad,precio_unitario,subtotal,productos(nombre,sku),venta_costos(costo_unitario)").eq("venta_id", String(row.id)).then((result) => {
+    void supabase.from("venta_items").select("id,cantidad,precio_unitario,subtotal,productos(nombre,sku,archivo_id,archivos(path),disenos(archivo_url,archivo_id,archivos(path))),venta_costos(costo_unitario)").eq("venta_id", String(row.id)).then((result) => {
       if (!active) return;
       if (result.error) setError(friendlyAdminError(result.error, "No se pudo cargar el detalle de la venta."));
       else setItems(rows(result.data));
@@ -878,7 +881,7 @@ const AdminSaleDetail: React.FC<{ row: AdminRow; onClose: () => void }> = ({ row
     const snapshot = isRecord(item.venta_costos) ? item.venta_costos : {};
     return sum + Number(snapshot.costo_unitario ?? 0) * Number(item.cantidad ?? 0);
   }, 0);
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/30 p-4"><div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto border border-gray-200 bg-white p-5 shadow-xl"><div className="flex items-center justify-between border-b border-gray-200 pb-4"><h2 className="font-semibold">Detalle de venta #{String(row.id).slice(0, 8).toUpperCase()}</h2><button type="button" title="Cerrar" onClick={onClose} className="p-1 text-gray-500 hover:bg-gray-100">Cerrar</button></div><dl className="grid grid-cols-2 gap-3 py-4 text-sm"><dt className="text-gray-500">Fecha</dt><dd className="text-right">{date(row.created_at)}</dd><dt className="text-gray-500">Sucursal</dt><dd className="text-right">{renderValue(row.sucursales, "sucursales")}</dd><dt className="text-gray-500">Vendedor</dt><dd className="text-right">{renderValue(row.profiles, "profiles")}</dd><dt className="text-gray-500">Cliente</dt><dd className="text-right">{renderValue(row.clientes, "clientes")}</dd><dt className="text-gray-500">Forma de pago</dt><dd className="text-right">{renderValue(row.forma_pago, "forma_pago")}</dd><dt className="text-gray-500">Estado</dt><dd className="text-right">{renderValue(row.entregada, "entregada")}</dd><dt className="font-medium">Total</dt><dd className="text-right text-lg font-semibold">{money(row.total)}</dd></dl>{loading ? <State message="Cargando productos..." /> : error ? <p className="border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p> : <div className="border-t border-gray-200 pt-4"><h3 className="text-sm font-semibold">Productos</h3>{items.length === 0 ? <State message="No hay productos asociados." /> : <div className="mt-3 divide-y divide-gray-100">{items.map((item) => { const product = isRecord(item.productos) ? item.productos : {}; return <div key={String(item.id)} className="flex items-center justify-between gap-4 py-3 text-sm"><div><p className="font-medium">{String(product.nombre ?? "Producto")}</p><p className="text-xs text-gray-500">{String(product.sku ?? "—")} · {String(item.cantidad ?? 0)} × {money(item.precio_unitario)}</p></div><span className="font-medium">{money(item.subtotal)}</span></div>; })}<div className="flex justify-between pt-3 text-sm"><span className="text-gray-500">Costo congelado</span><span>{money(totalCost)}</span></div><div className="flex justify-between pt-1 text-sm font-medium"><span>Utilidad bruta</span><span>{money(Number(row.total ?? 0) - totalCost)}</span></div></div>}</div>}</div></div>;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/30 p-4"><div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto border border-gray-200 bg-white p-5 shadow-xl"><div className="flex items-center justify-between border-b border-gray-200 pb-4"><h2 className="font-semibold">Detalle de venta #{String(row.id).slice(0, 8).toUpperCase()}</h2><button type="button" title="Cerrar" onClick={onClose} className="p-1 text-gray-500 hover:bg-gray-100">Cerrar</button></div><dl className="grid grid-cols-2 gap-3 py-4 text-sm"><dt className="text-gray-500">Fecha</dt><dd className="text-right">{date(row.created_at)}</dd><dt className="text-gray-500">Sucursal</dt><dd className="text-right">{renderValue(row.sucursales, "sucursales")}</dd><dt className="text-gray-500">Vendedor</dt><dd className="text-right">{renderValue(row.profiles, "profiles")}</dd><dt className="text-gray-500">Cliente</dt><dd className="text-right">{renderValue(row.clientes, "clientes")}</dd><dt className="text-gray-500">Forma de pago</dt><dd className="text-right">{renderValue(row.forma_pago, "forma_pago")}</dd><dt className="text-gray-500">Estado</dt><dd className="text-right">{renderValue(row.entregada, "entregada")}</dd><dt className="font-medium">Total</dt><dd className="text-right text-lg font-semibold">{money(row.total)}</dd></dl>{loading ? <State message="Cargando productos..." /> : error ? <p className="border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p> : <div className="border-t border-gray-200 pt-4"><h3 className="text-sm font-semibold">Productos</h3>{items.length === 0 ? <State message="No hay productos asociados." /> : <div className="mt-3 divide-y divide-gray-100">{items.map((item) => { const product = isRecord(item.productos) ? item.productos : {}; return <div key={String(item.id)} className="flex items-center justify-between gap-4 py-3 text-sm"><div className="flex items-center gap-3"><ProductImage product={product as ProductImageSource} alt={String(product.nombre ?? "Producto")} className="h-14 w-14" /><div><p className="font-medium">{String(product.nombre ?? "Producto")}</p><p className="text-xs text-gray-500">{String(product.sku ?? "—")} · {String(item.cantidad ?? 0)} × {money(item.precio_unitario)}</p></div></div><span className="font-medium">{money(item.subtotal)}</span></div>; })}<div className="flex justify-between pt-3 text-sm"><span className="text-gray-500">Costo congelado</span><span>{money(totalCost)}</span></div><div className="flex justify-between pt-1 text-sm font-medium"><span>Utilidad bruta</span><span>{money(Number(row.total ?? 0) - totalCost)}</span></div></div>}</div>}</div></div>;
 };
 
 const AdminDataListPage: React.FC<{ module: string; embedded?: boolean }> = ({
@@ -1030,7 +1033,7 @@ const AdminDataListPage: React.FC<{ module: string; embedded?: boolean }> = ({
                 <tr key={String(row.id ?? index)} className="hover:bg-gray-50">
                   {config.columns.map(([label, key]) => (
                     <td key={label} className="max-w-[220px] truncate px-4 py-3 text-gray-700">
-                      {renderValue(row[key], key)}
+                      {key === "imagen" ? <ProductImage product={(module === "inventario" ? row.productos : row) as ProductImageSource} alt={String(isRecord(row.productos) ? row.productos.nombre : row.nombre ?? "Producto")} className="h-12 w-12" /> : renderValue(row[key], key)}
                     </td>
                   ))}
                   {config.rowActions && (

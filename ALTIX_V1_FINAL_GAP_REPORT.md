@@ -2,7 +2,7 @@
 
 Fecha de revisión: 2026-10-03  
 Rama de trabajo: `production-v1-finalization`  
-Migración máxima local y PROD: `20261003010000` (`036_sales_unit_and_mobile_support`)
+Migración máxima local y PROD: `20261003020000` (`037_product_primary_image`)
 
 ## Resultado ejecutivo
 
@@ -10,6 +10,7 @@ Migración máxima local y PROD: `20261003010000` (`036_sales_unit_and_mobile_su
 - **Preparación para cliente: 78%**.
 - La aplicación compila y el esquema PROD está alineado hasta 036.
 - Se agregó descarga CSV real para ventas e inventario en Admin > Reportes.
+- Se agregó imagen principal por producto con fallback producto → diseño → placeholder.
 - PROD fue limpiado de datos demostrativos identificables mediante una transacción explícita.
 - No se modificaron migraciones, RPC, RLS, perfiles administrativos ni metadatos de archivos R2.
 
@@ -82,10 +83,10 @@ Limitación: el dump no está cifrado y todavía no se ha ejecutado una restaura
 | Comisiones | IMPLEMENTADO | Cálculo y lectura existentes; falta validar resultado con venta real |
 | Reportes en pantalla | IMPLEMENTADO | Dashboard conectado a RPC reales |
 | Descargas CSV | IMPLEMENTADO | Ventas e inventario con filtros y costos snapshot |
-| R2 / imágenes | PENDIENTE VALIDACIÓN MANUAL | Metadata preservada; falta confirmar objetos, CORS y upload real en PROD |
+| R2 / imágenes | IMPLEMENTADO / PENDIENTE VALIDACIÓN MANUAL | 037 aplicada y Edge Function desplegada; falta confirmar upload real de producto en PROD |
 | Backup / restore | PENDIENTE | Dump creado; falta restore probado y política de cifrado |
 | Configuración inicial cliente | PENDIENTE | Crear sucursal, productos, costos, usuarios y reglas reales |
-| Deploy del cambio CSV | PENDIENTE | La rama tiene el cambio; falta integrar a `main` y verificar el deploy Netlify |
+| Deploy del cambio CSV e imágenes | PENDIENTE | La rama tiene el cambio; falta integrar a `main` y verificar el deploy Netlify |
 
 ## Comparación con el plan operativo
 
@@ -101,7 +102,7 @@ No se encontró en el repositorio un archivo llamado `PLAN OPERATIVO FINAL — A
 
 ## Validación técnica
 
-- `supabase migration list`: PASS, local y remoto alineados hasta 036.
+- `supabase migration list`: PASS, local y remoto alineados hasta 037.
 - `supabase db push --dry-run`: PASS, sin migraciones pendientes.
 - `npx tsc --noEmit`: PASS.
 - `npm run lint`: PASS.

@@ -14,7 +14,7 @@ export class R2UploadError extends Error {
 }
 
 export interface UploadR2Params {
-  folder: 'disenos' | 'lanzamientos' | 'exports' | 'auditoria' | 'backups';
+  folder: 'disenos' | 'productos' | 'lanzamientos' | 'exports' | 'auditoria' | 'backups';
   file: File;
   originalName?: string;
 }

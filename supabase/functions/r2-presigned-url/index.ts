@@ -8,7 +8,7 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
-const allowedFolders = new Set(['disenos', 'lanzamientos', 'exports', 'auditoria', 'backups']);
+const allowedFolders = new Set(['disenos', 'productos', 'lanzamientos', 'exports', 'auditoria', 'backups']);
 const allowedMimeTypes = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/csv'
 ]);
@@ -20,7 +20,7 @@ const json = (body: Record<string, unknown>, status = 200) => new Response(JSON.
 
 const validPath = (value: unknown): value is string =>
   typeof value === 'string'
-  && /^(disenos|lanzamientos|exports|auditoria|backups)\/[A-Za-z0-9][A-Za-z0-9/_ .-]*$/.test(value)
+  && /^(disenos|productos|lanzamientos|exports|auditoria|backups)\/[A-Za-z0-9][A-Za-z0-9/_ .-]*$/.test(value)
   && !value.includes('..');
 
 const createR2Client = () => {
