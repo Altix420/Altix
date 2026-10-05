@@ -34,8 +34,9 @@ Era un bug real del backend, no un estado esperado de la interfaz. La migración
 ## Estado de despliegue
 
 - Implementado localmente: sí.
-- Publicado en GitHub/Netlify: pendiente de commit y push de esta pasada.
-- Verificado en producción: pendiente.
+- Publicado en GitHub: sí, `main` en commit `9a4cfae`.
+- Netlify PROD: verificado con HTTP 200 y bundle público que contiene las nuevas gráficas.
+- Verificado en producción: bundle desplegado confirmado; falta validación visual autenticada con datos reales.
 
 ## URL
 
