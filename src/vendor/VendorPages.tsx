@@ -79,8 +79,7 @@ type CashSession = {
   profiles?: { nombre_completo?: string | null } | null;
 };
 
-const input =
-  "w-full border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-600";
+const input = "altix-input w-full text-sm outline-none transition focus:border-blue-600";
 const money = (value: unknown) =>
   typeof value === "number"
     ? `Q ${value.toLocaleString("es-GT", { minimumFractionDigits: 2 })}`
@@ -116,20 +115,20 @@ const Frame: React.FC<{
   onRefresh?: () => void;
   children: React.ReactNode;
 }> = ({ title, description, onRefresh, children }) => (
-  <section className="space-y-6">
-    <header className="flex items-start justify-between gap-4 border-b border-gray-200 pb-5">
+  <section className="space-y-5">
+    <header className="flex items-center justify-between gap-3 border-b border-gray-200 pb-4">
       <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700">
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-700">
           Vendedor
         </p>
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-950">{title}</h1>
-        <p className="mt-1.5 text-sm text-gray-500">{description}</p>
+        <h1 className="text-xl font-semibold tracking-tight text-gray-950 sm:text-2xl">{title}</h1>
+        <p className="mt-1 text-xs text-gray-500 sm:text-sm">{description}</p>
       </div>
       {onRefresh && (
         <button
           onClick={onRefresh}
           title="Actualizar"
-          className="shrink-0 p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+          className="altix-vendor-button altix-vendor-secondary shrink-0 px-3"
         >
           <RefreshCw size={17} />
         </button>
@@ -139,7 +138,7 @@ const Frame: React.FC<{
   </section>
 );
 const State: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="border border-gray-200 bg-white p-10 text-center text-sm text-gray-500">
+  <div className="altix-vendor-surface p-8 text-center text-sm text-gray-500">
     {children}
   </div>
 );
@@ -637,7 +636,7 @@ export const VendorPosPage: React.FC = () => {
       ) : (
         <form onSubmit={submit} className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
           <div className="space-y-4">
-            <div className="border border-gray-200 bg-white p-4">
+            <div className="altix-vendor-surface p-4">
               <label className="block text-sm font-medium text-gray-700">Cliente</label>
               <div className="relative mt-2">
                 <Search
@@ -710,7 +709,7 @@ export const VendorPosPage: React.FC = () => {
                       className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-blue-50"
                     >
                       <span className="flex min-w-0 items-center gap-3">
-                        <ProductImage product={product as ProductImageSource} alt={product.nombre} className="h-12 w-12" />
+                        <ProductImage product={product as ProductImageSource} alt={product.nombre} className="h-16 w-16 rounded-lg" />
                         <span className="min-w-0"><strong>{product.nombre}</strong><span className="ml-2 text-xs text-gray-500">{product.sku}</span></span>
                       </span>
                       <span className="shrink-0 text-right">
@@ -732,7 +731,7 @@ export const VendorPosPage: React.FC = () => {
                 </div>
               )}
               {selectedProduct && (
-                <div className="mt-3 flex flex-col gap-3 border-t border-gray-100 pt-3 sm:flex-row sm:items-end"><ProductImage product={selectedProduct as ProductImageSource} alt={selectedProduct.nombre} className="h-20 w-20" />
+                <div className="mt-3 flex flex-col gap-3 rounded-lg border-t border-gray-100 pt-3 sm:flex-row sm:items-end"><ProductImage product={selectedProduct as ProductImageSource} alt={selectedProduct.nombre} className="h-20 w-20 rounded-lg" />
                   <label className="flex-1 text-sm">
                     Cantidad
                     <input
@@ -751,14 +750,14 @@ export const VendorPosPage: React.FC = () => {
                     type="button"
                     onClick={addItem}
                     disabled={quantity <= 0 || quantity > selectedProduct.stock}
-                    className="flex items-center justify-center gap-2 bg-gray-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-40"
+                    className="altix-vendor-button altix-vendor-primary disabled:opacity-40"
                   >
                     <Plus size={16} /> Agregar
                   </button>
                 </div>
               )}
             </div>
-            <div className="border border-gray-200 bg-white">
+            <div className="altix-vendor-surface">
               <div className="border-b border-gray-200 px-4 py-3">
                 <h2 className="font-semibold text-gray-950">Detalle de venta</h2>
               </div>
@@ -770,7 +769,7 @@ export const VendorPosPage: React.FC = () => {
                 <div className="divide-y divide-gray-100">
                   {cart.map((item) => (
                     <div key={item.producto_id} className="flex items-center gap-3 p-4">
-                      <ProductImage product={products.find((product) => product.id === item.producto_id) as ProductImageSource | undefined} alt={item.nombre} className="h-14 w-14" />
+                      <ProductImage product={products.find((product) => product.id === item.producto_id) as ProductImageSource | undefined} alt={item.nombre} className="h-16 w-16 rounded-lg" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{item.nombre}</p>
                         <p className="text-xs text-gray-500">
@@ -818,7 +817,7 @@ export const VendorPosPage: React.FC = () => {
               )}
             </div>
           </div>
-          <aside className="h-fit space-y-4 border border-gray-200 bg-white p-5 lg:sticky lg:top-6">
+          <aside className="altix-vendor-surface h-fit space-y-4 p-4 sm:p-5 lg:sticky lg:top-6">
             <div>
               <p className="text-xs uppercase tracking-wide text-gray-400">Total</p>
               <p className="mt-2 text-3xl font-semibold text-gray-950">{money(total)}</p>
@@ -843,7 +842,7 @@ export const VendorPosPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting || cart.length === 0 || !clientId}
-              className="flex w-full items-center justify-center gap-2 bg-blue-700 px-4 py-3 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50"
+              className="altix-vendor-button altix-vendor-primary w-full disabled:opacity-50"
             >
               <ShoppingCart size={17} />
               {submitting ? "Procesando…" : "Confirmar venta"}
@@ -1384,14 +1383,14 @@ export const VendorListPage: React.FC<{ module: string }> = ({ module }) => {
             </tbody>
           </table>
         </div>
-        <div className="space-y-3 md:hidden">
+        <div className="space-y-2.5 md:hidden">
           {filtered.map((row, index) => (
-            <article key={String(row.id ?? index)} className="border border-gray-200 bg-white p-4">
-              <div className="space-y-2">
+            <article key={String(row.id ?? index)} className="altix-vendor-card p-3 sm:p-4">
+              <div className="space-y-1.5">
                 {config.columns.slice(0, 4).map(([label, key]) => (
                   <div key={label} className="flex items-start justify-between gap-3 text-sm">
-                    <span className="shrink-0 text-xs uppercase tracking-wide text-gray-400">{label}</span>
-                    <span className="min-w-0 text-right text-gray-700">{key === "imagen" ? <ProductImage product={row as ProductImageSource} alt={String(row.nombre ?? "Producto")} className="h-14 w-14" /> : key === "archivo_url" ? <SignedImage path={row[key]} /> : key === "id" ? `#${shortId(row[key])}` : key === "monto_pagado" ? money(Number(row.monto_total ?? 0) - Number(row.saldo_pendiente ?? 0)) : display(row, key)}</span>
+                    <span className={`shrink-0 text-xs uppercase tracking-wide text-gray-400 ${key === "imagen" || key === "productos" ? "sr-only" : ""}`}>{label}</span>
+                    <span className={`min-w-0 text-right text-gray-700 ${key === "imagen" || key === "productos" ? "w-full text-left" : ""}`}>{key === "imagen" ? <ProductImage product={row as ProductImageSource} alt={String(row.nombre ?? "Producto")} className="h-20 w-20 rounded-lg" /> : key === "productos" ? <span className="flex items-center gap-3 text-left"><ProductImage product={(row[key] as ProductImageSource) ?? null} alt={String((row[key] as Row)?.nombre ?? "Producto")} className="h-16 w-16 rounded-lg" /><span><strong className="block text-gray-950">{String((row[key] as Row)?.nombre ?? "Producto")}</strong><span className="text-xs text-gray-500">SKU {String((row[key] as Row)?.sku ?? "—")}</span></span></span> : key === "archivo_url" ? <SignedImage path={row[key]} /> : key === "id" ? `#${shortId(row[key])}` : key === "monto_pagado" ? money(Number(row.monto_total ?? 0) - Number(row.saldo_pendiente ?? 0)) : display(row, key)}</span>
                   </div>
                 ))}
               </div>

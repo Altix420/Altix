@@ -28,4 +28,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .altix-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12); }
 .altix-notice-error { border: 1px solid #fecaca; border-radius: 0.625rem; background: #fef2f2; padding: 0.75rem 1rem; font-size: 0.875rem; color: #b91c1c; }
 .altix-safe-bottom { padding-bottom: calc(4.75rem + env(safe-area-inset-bottom)); }
+.altix-vendor-surface { border: 1px solid #e5e7eb; border-radius: 0.75rem; background: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / 0.03); }
+.altix-vendor-button { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 0.625rem; padding: 0.625rem 0.875rem; font-size: 0.875rem; font-weight: 600; transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease; }
+.altix-vendor-button:active { transform: translateY(1px); }
+.altix-vendor-button:disabled { cursor: not-allowed; opacity: 0.5; }
+.altix-vendor-primary { background: #1d4ed8; color: #fff; }
+.altix-vendor-primary:hover { background: #1e40af; }
+.altix-vendor-secondary { border: 1px solid #d1d5db; background: #fff; color: #374151; }
+.altix-vendor-secondary:hover { border-color: #93c5fd; background: #eff6ff; color: #1d4ed8; }
+.altix-vendor-card { border: 1px solid #e5e7eb; border-radius: 0.75rem; background: #fff; }
 @media (min-width: 768px) { .altix-safe-bottom { padding-bottom: 0; } }
