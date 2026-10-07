@@ -11,6 +11,7 @@ import { useAuth } from "../auth/hooks/useAuth";
 import { AdminProfitDashboardPage, AdminReportsPage } from "./AdminAnalyticsPages";
 import { PrintDocumentButton } from "../shared/printing/PrintDocumentButton";
 import { ProductImage, type ProductImageSource } from "../shared/product-images";
+import { downloadExcel } from "../shared/export/excel";
 
 type AdminRow = Record<string, unknown>;
 type Branch = { id: string; nombre: string };
@@ -47,21 +48,6 @@ const money = (value: unknown) =>
 const date = (value: unknown) =>
   typeof value === "string" ? new Date(value).toLocaleDateString("es-GT") : "—";
 
-const csvCell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
-const downloadCsv = (filename: string, columns: string[], data: Array<Record<string, unknown>>) => {
-  const csv = [
-    columns.join(","),
-    ...data.map((row) => columns.map((column) => csvCell(row[column])).join(",")),
-  ].join("\n");
-  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  anchor.remove();
-};
 
 const AdminExportButton: React.FC<{
   onDone: (message: string) => void;
@@ -76,20 +62,17 @@ const AdminExportButton: React.FC<{
         const data = inventoryRows.map((row) => {
           const product = isRecord(row.productos) ? row.productos : {};
           const category = isRecord(product.categorias) ? product.categorias : {};
-          const cost = isRecord(product.productos_costos) ? product.productos_costos : {};
           const branch = isRecord(row.sucursales) ? row.sucursales : {};
           return {
             Sucursal: branch.nombre ?? "",
             SKU: product.sku ?? "",
             Producto: product.nombre ?? "",
             Categoría: category.nombre ?? "",
-            Stock: row.stock,
-            Activo: product.activo ?? "",
-            Precio: product.precio_base ?? "",
-            Costo: cost.costo_unitario ?? "",
+            Unidad: product.unidad_venta ?? "unidad",
+            "Stock real": Number(row.stock ?? 0),
           };
         });
-        downloadCsv(`inventario_${new Date().toISOString().slice(0, 10)}.csv`, ["Sucursal", "SKU", "Producto", "Categoría", "Stock", "Activo", "Precio", "Costo"], data);
+        await downloadExcel(`inventario_${new Date().toISOString().slice(0, 10)}.xlsx`, "Inventario", data);
         onDone("Archivo de inventario generado correctamente.");
         return;
       }
@@ -97,7 +80,7 @@ const AdminExportButton: React.FC<{
         await Promise.all([
           supabase
             .from("inventarios")
-            .select("stock,sucursal_id,producto_id,productos(nombre,sku),sucursales(nombre)"),
+            .select("stock,sucursal_id,producto_id,productos(nombre,sku,unidad_venta),sucursales(nombre)"),
           supabase
             .from("movimientos_inventario")
             .select(
@@ -213,7 +196,7 @@ const AdminExportButton: React.FC<{
           historial: "control histórico; no modifica stock",
         })),
       ];
-      downloadCsv(`altix-inventario-${new Date().toISOString().slice(0, 10)}.csv`, ["tipo", "fecha", "sucursal", "producto", "codigo", "stock", "cantidad", "movimiento", "total", "responsable", "motivo", "historial"], data);
+      await downloadExcel(`altix-inventario-${new Date().toISOString().slice(0, 10)}.xlsx`, "Movimientos", data);
       onDone("Descarga administrativa generada correctamente.");
     } catch (err) {
       onError(friendlyAdminError(err, "No se pudo generar la descarga administrativa."));
@@ -229,20 +212,64 @@ const AdminExportButton: React.FC<{
       className="inline-flex items-center gap-2 border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 disabled:opacity-50 hover:border-blue-500 hover:text-blue-700"
     >
       <Download size={16} />
-      {loading ? "Preparando archivo..." : inventoryRows ? "Descargar inventario CSV" : "Descargar CSV"}
+      {loading ? "Preparando archivo..." : inventoryRows ? "Descargar inventario Excel" : "Descargar Excel"}
     </button>
   );
 };
 
-async function loadRows(resource: Resource): Promise<AdminRow[]> {
+const AdminCountExportButton: React.FC<{ onDone: (message: string) => void; onError: (message: string) => void }> = ({ onDone, onError }) => {
+  const [loading, setLoading] = useState(false);
+  const exportCounts = async () => {
+    setLoading(true);
+    try {
+      const [counts, details] = await Promise.all([
+        supabase.from("conteos").select("id,created_at,estado,sucursales(nombre),profiles!conteos_realizado_por_fkey(nombre_completo)"),
+        supabase.from("conteos_detalle").select("conteo_id,stock_sistema,stock_fisico,diferencia,productos(nombre,sku,unidad_venta)")
+      ]);
+      if (counts.error) throw counts.error;
+      if (details.error) throw details.error;
+      const countMap = new Map(rows(counts.data).map((row) => [String(row.id), row]));
+      const data = rows(details.data).map((row) => {
+        const count = countMap.get(String(row.conteo_id)) ?? {};
+        const product = isRecord(row.productos) ? row.productos : {};
+        const branch = isRecord(count.sucursales) ? count.sucursales : {};
+        const profile = isRecord(count.profiles) ? count.profiles : {};
+        return { Fecha: count.created_at ? new Date(String(count.created_at)) : null, Sucursal: branch.nombre ?? "", Usuario: profile.nombre_completo ?? "", SKU: product.sku ?? "", Producto: product.nombre ?? "", Unidad: product.unidad_venta ?? "unidad", "Stock sistema": Number(row.stock_sistema ?? 0), "Conteo físico": Number(row.stock_fisico ?? 0), Diferencia: Number(row.diferencia ?? Number(row.stock_fisico ?? 0) - Number(row.stock_sistema ?? 0)), Estado: count.estado ?? "" };
+      });
+      await downloadExcel(`conteos_fisicos_${new Date().toISOString().slice(0, 10)}.xlsx`, "Conteos", data);
+      onDone("Archivo de conteos generado correctamente.");
+    } catch (err) { onError(friendlyAdminError(err, "No se pudo generar el Excel de conteos.")); }
+    finally { setLoading(false); }
+  };
+  return <button type="button" onClick={() => void exportCounts()} disabled={loading} className="inline-flex items-center gap-2 border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 disabled:opacity-50"><Download size={16} />{loading ? "Preparando archivo..." : "Descargar conteos Excel"}</button>;
+};
+
+const AdminCountDetail: React.FC<{ row: AdminRow; onClose: () => void }> = ({ row, onClose }) => {
+  const [items, setItems] = useState<AdminRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { let active = true; void supabase.from("conteos_detalle").select("stock_sistema,stock_fisico,diferencia,productos(nombre,sku,unidad_venta)").eq("conteo_id", String(row.id)).then((result) => { if (!active) return; setItems(rows(result.data)); setLoading(false); }); return () => { active = false; }; }, [row.id]);
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/30 p-4"><div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto border border-gray-200 bg-white p-5 shadow-xl"><div className="flex items-center justify-between border-b border-gray-200 pb-4"><div><h2 className="font-semibold">Detalle de conteo físico</h2><p className="mt-1 text-xs text-gray-500">{date(row.created_at)} · {renderValue(row.sucursales, "sucursales")}</p></div><button type="button" onClick={onClose} className="min-h-11 px-3 text-sm text-gray-500">Cerrar</button></div>{loading ? <State message="Cargando diferencias..." /> : <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[640px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr><th className="px-3 py-2">SKU</th><th className="px-3 py-2">Producto</th><th className="px-3 py-2">Unidad</th><th className="px-3 py-2">Sistema</th><th className="px-3 py-2">Físico</th><th className="px-3 py-2">Diferencia</th></tr></thead><tbody className="divide-y divide-gray-100">{items.map((item, index) => { const product = isRecord(item.productos) ? item.productos : {}; const difference = Number(item.diferencia ?? Number(item.stock_fisico ?? 0) - Number(item.stock_sistema ?? 0)); return <tr key={String(item.id ?? index)}><td className="px-3 py-2">{String(product.sku ?? "—")}</td><td className="px-3 py-2">{String(product.nombre ?? "—")}</td><td className="px-3 py-2">{String(product.unidad_venta ?? "unidad")}</td><td className="px-3 py-2">{String(item.stock_sistema ?? 0)}</td><td className="px-3 py-2">{String(item.stock_fisico ?? 0)}</td><td className={`px-3 py-2 font-semibold ${difference === 0 ? "text-green-700" : difference < 0 ? "text-red-700" : "text-amber-700"}`}>{difference > 0 ? "+" : ""}{difference}</td></tr>; })}</tbody></table>{items.length === 0 && <p className="p-6 text-center text-sm text-gray-500">Este conteo aún no tiene detalle guardado.</p>}</div>}</div></div>;
+};
+
+async function loadRows(resource: Resource, module?: string): Promise<AdminRow[]> {
   switch (resource) {
     case "ventas": {
       const result = await supabase
         .from("ventas")
-        .select("*, clientes(nombre), sucursales(nombre), profiles!ventas_vendedor_id_fkey(nombre_completo)")
+        .select("*, clientes(nombre,es_mayorista), sucursales(nombre), profiles!ventas_vendedor_id_fkey(nombre_completo)")
         .order("created_at", { ascending: false });
       if (result.error) throw result.error;
-      return rows(result.data);
+      const sales = rows(result.data);
+      const ids = sales.map((row) => String(row.id)).filter(Boolean);
+      if (ids.length === 0) return sales;
+      const credits = await supabase.from("cuentas_cobrar").select("venta_id").in("venta_id", ids);
+      if (credits.error) throw credits.error;
+      const creditIds = new Set(rows(credits.data).map((row) => String(row.venta_id)));
+      return sales.map((row) => ({
+        ...row,
+        tipo_venta: creditIds.has(String(row.id)) ? "Crédito" : "Contado",
+        tipo_cliente: isRecord(row.clientes) && row.clientes.es_mayorista ? "Mayorista" : "Final",
+      }));
     }
     case "cotizaciones": {
       const result = await supabase
@@ -270,7 +297,7 @@ async function loadRows(resource: Resource): Promise<AdminRow[]> {
     case "clientes": {
       const result = await supabase.from("clientes").select("*").order("nombre");
       if (result.error) throw result.error;
-      return rows(result.data);
+      return rows(result.data).filter((row) => module !== "mayoristas" || row.es_mayorista === true);
     }
     case "productos": {
       const result = await supabase.from("productos").select("*, archivos(path), disenos(archivo_url,archivo_id,archivos(path)), productos_costos(costo_unitario)").order("nombre");
@@ -445,6 +472,7 @@ const configs: Record<
       ["Total", "total"],
       ["Cliente", "clientes"],
       ["Forma de pago", "forma_pago"],
+      ["Tipo de venta", "tipo_venta"],
       ["Estado", "entregada"],
     ],
     rowActions: ["sale-deliver", "sale-return"],
@@ -897,18 +925,19 @@ const AdminDataListPage: React.FC<{ module: string; embedded?: boolean }> = ({
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchId, setBranchId] = useState("");
   const [saleDetail, setSaleDetail] = useState<AdminRow | null>(null);
+  const [countDetail, setCountDetail] = useState<AdminRow | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setData(await loadRows(config.resource));
+      setData(await loadRows(config.resource, module));
     } catch (err) {
       setError(friendlyAdminError(err, "No se pudo cargar la información."));
     } finally {
       setLoading(false);
     }
-  }, [config.resource]);
+  }, [config.resource, module]);
   // The initial fetch synchronizes the page with the selected backend resource.
   // eslint-disable-next-line react/set-state-in-effect
   useEffect(() => {
@@ -975,6 +1004,7 @@ const AdminDataListPage: React.FC<{ module: string; embedded?: boolean }> = ({
       {(module === "inventario" || module === "reportes") && (
         <>{module === "inventario" && <label className="text-xs text-gray-500">Sucursal<select value={branchId} onChange={(event) => setBranchId(event.target.value)} className="ml-2 border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900"><option value="">Todas las sucursales</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.nombre}</option>)}</select></label>}<AdminExportButton inventoryRows={module === "inventario" ? filtered : undefined} onDone={setSuccess} onError={setError} /></>
       )}
+      {module === "conteo" && <AdminCountExportButton onDone={setSuccess} onError={setError} />}
     </>
   );
   return (
@@ -1050,6 +1080,7 @@ const AdminDataListPage: React.FC<{ module: string; embedded?: boolean }> = ({
                             />
                           ))}
                         {module === "ventas" && Boolean(row.id) && <button type="button" onClick={() => setSaleDetail(row)} className="text-xs font-medium text-blue-700">Ver detalle</button>}
+                        {module === "conteo" && Boolean(row.id) && <button type="button" onClick={() => setCountDetail(row)} className="text-xs font-medium text-blue-700">Ver diferencias</button>}
                         {(module === "ventas" || module === "pedidos" || (module === "cotizaciones" && !["pendiente", "rechazada"].includes(String(row.aprobacion_descuento)))) && Boolean(row.id) && (
                           <PrintDocumentButton kind={module === "ventas" ? "sale" : module === "cotizaciones" ? "quotation" : "order"} documentId={String(row.id)} />
                         )}
@@ -1066,6 +1097,7 @@ const AdminDataListPage: React.FC<{ module: string; embedded?: boolean }> = ({
         </div>
       )}
       {saleDetail && <AdminSaleDetail row={saleDetail} onClose={() => setSaleDetail(null)} />}
+      {countDetail && <AdminCountDetail row={countDetail} onClose={() => setCountDetail(null)} />}
     </PageFrame>
   );
 };

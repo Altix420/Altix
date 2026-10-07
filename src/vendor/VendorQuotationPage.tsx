@@ -6,7 +6,7 @@ import { friendlyAdminError } from "../admin/admin.errors";
 import { supabase } from "../shared/lib/supabase";
 import type { Json } from "../shared/types/database.types";
 import { vendorService } from "./vendor.service";
-import { formatQuantity, pricePerUnit, unitAllowsFraction, type SalesUnit } from "../shared/units";
+import { formatQuantity, isValidUnitQuantity, pricePerUnit, unitAllowsFraction, unitStep, type SalesUnit } from "../shared/units";
 import { ProductImage, type ProductImageSource } from "../shared/product-images";
 
 type Client = { id: string; nombre: string; nit_dpi: string | null; es_mayorista: boolean | null };
@@ -100,7 +100,7 @@ export const VendorQuotationPage: React.FC = () => {
   const addLine = () => {
     setError(null);
     const negotiated = Number(line.precio_negociado);
-    if ((!line.producto_id && !line.diseno_id && line.extra_ids.length === 0) || line.cantidad <= 0 || (!unitAllowsFraction(line.unidad_venta) && !Number.isInteger(line.cantidad)) || !Number.isFinite(negotiated) || negotiated < 0 || negotiated > line.precio_oficial || line.precio_oficial < 0) {
+    if ((!line.producto_id && !line.diseno_id && line.extra_ids.length === 0) || !isValidUnitQuantity(line.cantidad, line.unidad_venta) || !Number.isFinite(negotiated) || negotiated < 0 || negotiated > line.precio_oficial || line.precio_oficial < 0) {
       setError("Cada línea necesita producto, diseño o extra, cantidad válida y precio válido.");
       return;
     }
@@ -132,7 +132,7 @@ export const VendorQuotationPage: React.FC = () => {
     event.preventDefault();
     setError(null); setMessage(null);
     if (!user || !sucursalActiva || !clientId || lines.length === 0 || total <= 0) { setError("Selecciona cliente y agrega al menos una línea con total mayor a cero."); return; }
-    if (lines.some((item) => item.cantidad < 1 || (!unitAllowsFraction(item.unidad_venta) && !Number.isInteger(item.cantidad)))) { setError("Hay una cantidad inválida para la unidad de venta seleccionada."); return; }
+    if (lines.some((item) => !isValidUnitQuantity(item.cantidad, item.unidad_venta))) { setError("Hay una cantidad inválida para la unidad de venta seleccionada."); return; }
     if (payment === "credito" && !selectedClient?.es_mayorista) { setError("El crédito solo está disponible para clientes mayoristas."); return; }
     if (totalDiscount > 0 && !approvalReason.trim()) { setError("Indica el motivo del descuento para solicitar aprobación."); return; }
     setSubmitting(true);
@@ -206,7 +206,7 @@ export const VendorQuotationPage: React.FC = () => {
             <label className="text-sm">Diseño oficial<select value={line.diseno_id} onChange={(event) => { const designId = event.target.value; const official = getOfficialPrice(line.producto_id, designId, line.extra_ids); setLine({ ...line, diseno_id: designId, precio_unitario: official, precio_negociado: official, precio_oficial: official, descuento: 0 }); }} className={`${input} mt-1`}><option value="">Sin diseño</option>{designs.map((design) => <option key={design.id} value={design.id}>{design.nombre} · {money(design.precio)}</option>)}</select></label>
             {(selectedLineProduct || selectedLineDesign) && <div className="flex items-center gap-3 border border-gray-100 bg-gray-50 p-3 text-sm sm:col-span-2"><ProductImage product={(selectedLineProduct ?? selectedLineDesign) as ProductImageSource} alt={selectedLineProduct?.nombre ?? selectedLineDesign?.nombre ?? "Producto"} className="h-16 w-16" /><div><p className="font-medium">{selectedLineProduct?.nombre ?? selectedLineDesign?.nombre}</p><p className="text-xs text-gray-500">{selectedLineProduct?.sku ?? "Diseño"} · {pricePerUnit(line.precio_oficial, line.unidad_venta)}</p></div></div>}
             <fieldset className="text-sm sm:col-span-2"><legend>Extras adicionales</legend><div className="mt-1 grid gap-2 border border-gray-200 p-3 sm:grid-cols-2">{extras.map((extra) => <label key={extra.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={line.extra_ids.includes(extra.id)} onChange={(event) => { const extraIds = event.target.checked ? [...line.extra_ids, extra.id] : line.extra_ids.filter((id) => id !== extra.id); const official = getOfficialPrice(line.producto_id, line.diseno_id, extraIds); setLine({ ...line, extra_ids: extraIds, precio_unitario: official, precio_negociado: official, precio_oficial: official, descuento: 0 }); }} /><span>{extra.nombre} · {money(extra.precio_adicional)}</span></label>)}</div></fieldset>
-            <label className="text-sm">Cantidad ({line.unidad_venta})<input type="number" min="1" step={unitAllowsFraction(line.unidad_venta) ? "0.001" : "1"} inputMode={unitAllowsFraction(line.unidad_venta) ? "decimal" : "numeric"} value={line.cantidad} onChange={(event) => { const raw = Number(event.target.value); const cantidad = Number.isFinite(raw) ? Math.max(1, Number(raw.toFixed(3))) : 1; setLine({ ...line, cantidad, descuento: Number(((line.precio_oficial - Number(line.precio_negociado || 0)) * cantidad).toFixed(2)) }); }} className={`${input} mt-1`} /></label>
+            <label className="text-sm">Cantidad ({line.unidad_venta})<input type="number" min="0.25" step={unitStep(line.unidad_venta)} inputMode={unitAllowsFraction(line.unidad_venta) ? "decimal" : "numeric"} value={line.cantidad} onChange={(event) => { const raw = Number(event.target.value); const cantidad = Number.isFinite(raw) ? Math.max(line.unidad_venta === "vara" ? 0.25 : 1, Number(raw.toFixed(3))) : 1; setLine({ ...line, cantidad, descuento: Number(((line.precio_oficial - Number(line.precio_negociado || 0)) * cantidad).toFixed(2)) }); }} className={`${input} mt-1`} /></label>
             <label className="text-sm">Precio oficial<input type="text" readOnly value={money(line.precio_oficial)} className={`${input} mt-1 bg-gray-50 text-gray-500`} /></label>
             <label className="text-sm">Precio negociado<input inputMode="decimal" type="number" min="0" step="0.01" value={line.precio_negociado} onChange={(event) => { const raw = event.target.value; const parsed = raw === "" ? 0 : Number(raw); const safe = Number.isFinite(parsed) ? Math.min(line.precio_oficial, Math.max(0, parsed)) : 0; setLine({ ...line, precio_unitario: safe, precio_negociado: raw, descuento: Number(((line.precio_oficial - safe) * line.cantidad).toFixed(2)) }); }} className={`${input} mt-1`} /></label>
             <label className="text-sm">Descuento total solicitado<input type="text" readOnly value={money(line.descuento)} className={`${input} mt-1 bg-gray-50 text-gray-500`} /></label>
