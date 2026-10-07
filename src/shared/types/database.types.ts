@@ -1106,6 +1106,7 @@ export type Database = {
           registrado_por: string | null;
           sesion_caja_id: string | null;
           sucursal_id: string | null;
+          sucursal_imputada_id: string;
         };
         Insert: {
           autorizado_at?: string | null;
@@ -1124,6 +1125,7 @@ export type Database = {
           registrado_por?: string | null;
           sesion_caja_id?: string | null;
           sucursal_id?: string | null;
+          sucursal_imputada_id: string;
         };
         Update: {
           autorizado_at?: string | null;
@@ -1142,6 +1144,7 @@ export type Database = {
           registrado_por?: string | null;
           sesion_caja_id?: string | null;
           sucursal_id?: string | null;
+          sucursal_imputada_id?: string;
         };
         Relationships: [
           {
@@ -1182,6 +1185,13 @@ export type Database = {
           {
             foreignKeyName: "gastos_sucursal_id_fkey";
             columns: ["sucursal_id"];
+            isOneToOne: false;
+            referencedRelation: "sucursales";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "gastos_sucursal_imputada_id_fkey";
+            columns: ["sucursal_imputada_id"];
             isOneToOne: false;
             referencedRelation: "sucursales";
             referencedColumns: ["id"];
@@ -2633,6 +2643,10 @@ export type Database = {
         Args: { p_monto_apertura: number; p_sucursal_id: string; p_usuario_id: string };
         Returns: string;
       };
+      actualizar_comision_mensual: {
+        Args: { p_periodo: string; p_vendedor_id: string };
+        Returns: Json;
+      };
       actualizar_estado_pedido: {
         Args: {
           p_actualizado_por?: string;
@@ -2854,6 +2868,10 @@ export type Database = {
         Args: { p_entregada_por: string; p_venta_id: string };
         Returns: string;
       };
+      obtener_comision_mensual_vendedor: {
+        Args: { p_periodo?: string; p_vendedor_id?: string };
+        Returns: Json;
+      };
       obtener_dashboard_admin: {
         Args: { p_desde?: string; p_hasta?: string; p_sucursal_id?: string };
         Returns: Json;
@@ -2965,6 +2983,7 @@ export type Database = {
           p_registrado_por: string;
           p_sesion_caja_id: string;
           p_sucursal_id: string;
+          p_sucursal_imputada_id?: string;
         };
         Returns: string;
       };

@@ -112,15 +112,63 @@ BEGIN
   INSERT INTO public.gastos (sesion_caja_id, sucursal_id, sucursal_imputada_id, categoria, monto, descripcion, comprobante_url, registrado_por, observacion, estado, autorizado_por, autorizado_at, operation_id)
   VALUES (p_sesion_caja_id, p_sucursal_id, v_imputada, btrim(p_categoria), p_monto, btrim(p_descripcion), NULLIF(btrim(p_comprobante_url), ''), p_registrado_por, NULLIF(btrim(p_observacion), ''), v_estado, CASE WHEN v_estado = 'aprobado' THEN p_registrado_por END, CASE WHEN v_estado = 'aprobado' THEN now() END, p_operation_id)
   RETURNING id INTO v_gasto_id;
-  INSERT INTO public.movimientos_caja (sesion_caja_id, tipo, monto, concepto, referencia_id, operation_id)
-  VALUES (p_sesion_caja_id, 'egreso', p_monto, 'Gasto: ' || btrim(p_descripcion) || ' · ' || v_imputada::text, v_gasto_id, COALESCE(p_operation_id, 'gasto:' || v_gasto_id::text))
-  RETURNING id INTO v_movimiento_id;
-  UPDATE public.gastos SET movimiento_caja_id = v_movimiento_id WHERE id = v_gasto_id;
+  -- Una solicitud pendiente no representa una salida aplicada. El movimiento
+  -- se crea al aprobarla; un desembolso previo queda trazable por separado.
+  IF v_estado = 'aprobado' THEN
+    INSERT INTO public.movimientos_caja (sesion_caja_id, tipo, monto, concepto, referencia_id, operation_id)
+    VALUES (p_sesion_caja_id, 'egreso', p_monto, 'Gasto: ' || btrim(p_descripcion) || ' · ' || v_imputada::text, v_gasto_id, COALESCE(p_operation_id, 'gasto:' || v_gasto_id::text))
+    RETURNING id INTO v_movimiento_id;
+    UPDATE public.gastos SET movimiento_caja_id = v_movimiento_id WHERE id = v_gasto_id;
+  END IF;
   RETURN v_gasto_id;
 END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.registrar_gasto(UUID, UUID, TEXT, NUMERIC, TEXT, TEXT, UUID, TEXT, TEXT, UUID) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.resolver_gasto(
+  p_gasto_id UUID,
+  p_aprobador_id UUID,
+  p_aprobar BOOLEAN
+) RETURNS UUID
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_gasto RECORD;
+  v_sesion RECORD;
+  v_movimiento_id UUID;
+  v_reintegro_id UUID;
+BEGIN
+  IF NOT public.altix_is_admin(p_aprobador_id) OR (auth.uid() IS NOT NULL AND auth.uid() <> p_aprobador_id) THEN
+    RAISE EXCEPTION 'Solo un administrador autenticado puede resolver gastos.';
+  END IF;
+  SELECT * INTO v_gasto FROM public.gastos WHERE id = p_gasto_id FOR UPDATE;
+  IF NOT FOUND OR v_gasto.estado <> 'pendiente' THEN RAISE EXCEPTION 'El gasto no está pendiente.'; END IF;
+  SELECT * INTO v_sesion FROM public.sesiones_caja WHERE id = v_gasto.sesion_caja_id FOR UPDATE;
+  IF NOT FOUND OR v_sesion.estado <> 'abierta' THEN RAISE EXCEPTION 'La sesión de caja del gasto ya está cerrada.'; END IF;
+
+  UPDATE public.gastos
+  SET estado = CASE WHEN p_aprobar THEN 'aprobado' ELSE 'rechazado' END,
+      autorizado_por = p_aprobador_id, autorizado_at = now()
+  WHERE id = p_gasto_id;
+
+  IF p_aprobar AND v_gasto.movimiento_caja_id IS NULL THEN
+    INSERT INTO public.movimientos_caja (sesion_caja_id, tipo, monto, concepto, referencia_id, operation_id)
+    VALUES (v_gasto.sesion_caja_id, 'egreso', v_gasto.monto, 'Gasto aprobado: ' || v_gasto.descripcion, p_gasto_id, 'gasto-aprobacion:' || p_gasto_id::text)
+    RETURNING id INTO v_movimiento_id;
+    UPDATE public.gastos SET movimiento_caja_id = v_movimiento_id WHERE id = p_gasto_id;
+  ELSIF NOT p_aprobar AND v_gasto.movimiento_caja_id IS NOT NULL AND v_gasto.movimiento_reintegro_id IS NULL THEN
+    INSERT INTO public.movimientos_caja (sesion_caja_id, tipo, monto, concepto, referencia_id, operation_id)
+    VALUES (v_gasto.sesion_caja_id, 'ingreso', v_gasto.monto, 'Reintegro de gasto rechazado: ' || v_gasto.descripcion, p_gasto_id, 'gasto-reintegro:' || p_gasto_id::text)
+    RETURNING id INTO v_reintegro_id;
+    UPDATE public.gastos SET movimiento_reintegro_id = v_reintegro_id WHERE id = p_gasto_id;
+  END IF;
+  RETURN p_gasto_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.resolver_gasto(UUID, UUID, BOOLEAN) TO authenticated;
 
 -- Reopen the product RPC with the new operational unit while preserving its
 -- existing cost snapshot and image behavior.

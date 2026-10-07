@@ -72,7 +72,7 @@ const AdminExportButton: React.FC<{
             "Stock real": Number(row.stock ?? 0),
           };
         });
-        downloadExcel(`inventario_${new Date().toISOString().slice(0, 10)}.xlsx`, "Inventario", data);
+        await downloadExcel(`inventario_${new Date().toISOString().slice(0, 10)}.xlsx`, "Inventario", data);
         onDone("Archivo de inventario generado correctamente.");
         return;
       }
@@ -196,7 +196,7 @@ const AdminExportButton: React.FC<{
           historial: "control histórico; no modifica stock",
         })),
       ];
-      downloadExcel(`altix-inventario-${new Date().toISOString().slice(0, 10)}.xlsx`, "Movimientos", data);
+      await downloadExcel(`altix-inventario-${new Date().toISOString().slice(0, 10)}.xlsx`, "Movimientos", data);
       onDone("Descarga administrativa generada correctamente.");
     } catch (err) {
       onError(friendlyAdminError(err, "No se pudo generar la descarga administrativa."));
@@ -236,7 +236,7 @@ const AdminCountExportButton: React.FC<{ onDone: (message: string) => void; onEr
         const profile = isRecord(count.profiles) ? count.profiles : {};
         return { Fecha: count.created_at ? new Date(String(count.created_at)) : null, Sucursal: branch.nombre ?? "", Usuario: profile.nombre_completo ?? "", SKU: product.sku ?? "", Producto: product.nombre ?? "", Unidad: product.unidad_venta ?? "unidad", "Stock sistema": Number(row.stock_sistema ?? 0), "Conteo físico": Number(row.stock_fisico ?? 0), Diferencia: Number(row.diferencia ?? Number(row.stock_fisico ?? 0) - Number(row.stock_sistema ?? 0)), Estado: count.estado ?? "" };
       });
-      downloadExcel(`conteos_fisicos_${new Date().toISOString().slice(0, 10)}.xlsx`, "Conteos", data);
+      await downloadExcel(`conteos_fisicos_${new Date().toISOString().slice(0, 10)}.xlsx`, "Conteos", data);
       onDone("Archivo de conteos generado correctamente.");
     } catch (err) { onError(friendlyAdminError(err, "No se pudo generar el Excel de conteos.")); }
     finally { setLoading(false); }
@@ -256,7 +256,7 @@ async function loadRows(resource: Resource, module?: string): Promise<AdminRow[]
     case "ventas": {
       const result = await supabase
         .from("ventas")
-        .select("*, clientes(nombre), sucursales(nombre), profiles!ventas_vendedor_id_fkey(nombre_completo)")
+        .select("*, clientes(nombre,es_mayorista), sucursales(nombre), profiles!ventas_vendedor_id_fkey(nombre_completo)")
         .order("created_at", { ascending: false });
       if (result.error) throw result.error;
       const sales = rows(result.data);
@@ -265,7 +265,11 @@ async function loadRows(resource: Resource, module?: string): Promise<AdminRow[]
       const credits = await supabase.from("cuentas_cobrar").select("venta_id").in("venta_id", ids);
       if (credits.error) throw credits.error;
       const creditIds = new Set(rows(credits.data).map((row) => String(row.venta_id)));
-      return sales.map((row) => ({ ...row, tipo_venta: creditIds.has(String(row.id)) ? "Crédito" : "Contado" }));
+      return sales.map((row) => ({
+        ...row,
+        tipo_venta: creditIds.has(String(row.id)) ? "Crédito" : "Contado",
+        tipo_cliente: isRecord(row.clientes) && row.clientes.es_mayorista ? "Mayorista" : "Final",
+      }));
     }
     case "cotizaciones": {
       const result = await supabase

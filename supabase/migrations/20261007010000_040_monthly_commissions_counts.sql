@@ -95,7 +95,7 @@ BEGIN
     v_operation := 'comision-mensual:' || p_vendedor_id::text || ':' || p_periodo || ':' || replace(to_char(v_target, 'FM999999990.00'), '.', '_');
     INSERT INTO public.ajustes_comision(comision_id, monto_ajuste, motivo, aprobado_por, operation_id)
     VALUES (v_base, v_delta, 'Ajuste de cierre mensual por acumulado elegible ' || p_periodo, auth.uid(), v_operation)
-    ON CONFLICT (operation_id) DO NOTHING;
+    ON CONFLICT (operation_id) WHERE operation_id IS NOT NULL DO NOTHING;
   END IF;
   RETURN public.obtener_comision_mensual_vendedor(p_vendedor_id, p_periodo);
 END;
