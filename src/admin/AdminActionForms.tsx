@@ -247,7 +247,8 @@ export const AdminActionButton: React.FC<{
           p_registrado_por: profile.id,
           p_observacion: text("observacion") || undefined,
           p_operation_id: createOperationId("gasto"),
-        });
+          p_sucursal_imputada_id: text("sucursal_imputada_id") || String(row.sucursal_id ?? sucursalActiva?.id ?? ""),
+        } as never);
       if (action === "cash-movement")
         await adminService.registrarMovimientoCaja({
           p_sesion_caja_id: String(row.id),
@@ -510,6 +511,7 @@ export const AdminActionButton: React.FC<{
             )}
             {action === "cash-expense" && (
               <>
+                {profile?.role === "administrador" && <Field label="Sucursal imputada *"><select name="sucursal_imputada_id" required defaultValue={String(row.sucursal_id ?? "")} className={input}><option value="">Selecciona una sucursal</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.nombre}</option>)}</select></Field>}
                 <Field label="Categoría *">
                   <input name="categoria" required className={input} />
                 </Field>

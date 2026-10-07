@@ -25,7 +25,7 @@ import { getSignedR2Url } from "../storage/r2.service";
 import { PrintDocumentButton } from "../shared/printing/PrintDocumentButton";
 import { VendorAnalyticsDashboard } from "./VendorAnalyticsDashboard";
 import type { Database } from "../shared/types/database.types";
-import { formatQuantity, pricePerUnit, unitAllowsFraction, type SalesUnit } from "../shared/units";
+import { formatQuantity, isValidUnitQuantity, pricePerUnit, unitAllowsFraction, unitStep, type SalesUnit } from "../shared/units";
 import { ProductImage, type ProductImageSource } from "../shared/product-images";
 
 type Row = Record<string, unknown>;
@@ -485,7 +485,7 @@ export const VendorPosPage: React.FC = () => {
   );
   const addItem = () => {
     if (!selectedProduct || quantity <= 0) return;
-    if (!unitAllowsFraction(selectedProduct.unidad_venta) && !Number.isInteger(quantity)) {
+    if (!isValidUnitQuantity(quantity, selectedProduct.unidad_venta)) {
       setError("Esta unidad solo admite cantidades enteras.");
       return;
     }
@@ -739,8 +739,8 @@ export const VendorPosPage: React.FC = () => {
                       required
                       min="1"
                       max={selectedProduct.stock}
-                      step={selectedProduct.unidad_venta === "metro" || selectedProduct.unidad_venta === "yarda" ? "0.001" : "1"}
-                      inputMode={selectedProduct.unidad_venta === "metro" || selectedProduct.unidad_venta === "yarda" ? "decimal" : "numeric"}
+                      step={unitStep(selectedProduct.unidad_venta)}
+                      inputMode={unitAllowsFraction(selectedProduct.unidad_venta) ? "decimal" : "numeric"}
                       type="number"
                       value={quantity}
                       onChange={(event) => setQuantity(Number(event.target.value))}
@@ -1305,6 +1305,7 @@ export const VendorListPage: React.FC<{ module: string }> = ({ module }) => {
   const canQuoteActions = module === "cotizaciones";
   const canFinancialActions = module === "credito" || module === "pedidos";
   const canAddToSale = module === "catalogo";
+  if (module === "comision") return <VendorCommissionPage />;
   return (
     <Frame title={config.title} description={config.description} onRefresh={() => void load()}>
       <Notice error={error} />
@@ -1416,6 +1417,30 @@ export const VendorListPage: React.FC<{ module: string }> = ({ module }) => {
       )}
     </Frame>
   );
+};
+
+const VendorCommissionPage: React.FC = () => {
+  const { user } = useAuth();
+  const [summary, setSummary] = useState<Row | null>(null);
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const periodo = new Date().toISOString().slice(0, 7);
+  const load = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    setError(null);
+    const [monthly, ledger] = await Promise.all([
+      supabase.rpc("obtener_comision_mensual_vendedor" as never, { p_vendedor_id: user.id, p_periodo: periodo } as never),
+      supabase.from("comisiones").select("*, ventas(id, total, clientes(nombre))").eq("vendedor_id", user.id).eq("periodo", periodo).order("created_at", { ascending: false }),
+    ]);
+    if (monthly.error || ledger.error) setError(friendlyAdminError(monthly.error ?? ledger.error, "No se pudo cargar el resumen mensual de comisión."));
+    else { setSummary((monthly.data ?? null) as Row | null); setRows((ledger.data ?? []) as Row[]); }
+    setLoading(false);
+  }, [periodo, user]);
+  useEffect(() => { void load(); }, [load]);
+  const value = (key: string) => Number(summary?.[key] ?? 0);
+  return <Frame title="Mi comisión" description="Cierre mensual basado en ventas elegibles, devoluciones y ledger." onRefresh={() => void load()}><Notice error={error} />{loading ? <State>Cargando comisión mensual...</State> : <><div className="grid grid-cols-2 gap-3 sm:grid-cols-4"><div className="altix-vendor-card p-4"><p className="text-xs uppercase text-gray-500">Ventas elegibles</p><p className="mt-1 text-xl font-semibold">{money(value("ventas_finales_elegibles"))}</p></div><div className="altix-vendor-card p-4"><p className="text-xs uppercase text-gray-500">Rango actual</p><p className="mt-1 text-xl font-semibold">{value("porcentaje_actual").toFixed(2)}%</p></div><div className="altix-vendor-card p-4"><p className="text-xs uppercase text-gray-500">Comisión acumulada</p><p className="mt-1 text-xl font-semibold">{money(value("comision_ledger"))}</p></div><div className="altix-vendor-card p-4"><p className="text-xs uppercase text-gray-500">Faltan para siguiente</p><p className="mt-1 text-xl font-semibold">{summary?.siguiente_umbral ? money(value("faltante_siguiente")) : "—"}</p></div></div><div className="altix-vendor-surface p-4 text-sm"><p className="text-gray-500">Periodo {periodo}</p><p className="mt-1">Siguiente nivel: {summary?.siguiente_umbral ? `${money(value("siguiente_umbral"))} → ${value("siguiente_porcentaje").toFixed(2)}%` : "Nivel máximo alcanzado"}</p><p className="mt-1 text-gray-500">Devoluciones descontadas: {money(value("devoluciones"))}</p></div><section className="altix-vendor-surface overflow-x-auto"><div className="border-b border-gray-100 px-4 py-3"><h2 className="font-semibold">Ledger del mes</h2></div><table className="w-full min-w-[620px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr><th className="px-4 py-3">Fecha</th><th className="px-4 py-3">Venta</th><th className="px-4 py-3">Base</th><th className="px-4 py-3">%</th><th className="px-4 py-3">Comisión</th><th className="px-4 py-3">Estado</th></tr></thead><tbody className="divide-y divide-gray-100">{rows.map((row) => <tr key={String(row.id)}><td className="px-4 py-3">{date(row.created_at)}</td><td className="px-4 py-3">#{shortId(row.venta_id)}</td><td className="px-4 py-3">{money(row.monto_venta)}</td><td className="px-4 py-3">{String(row.porcentaje_aplicado ?? 0)}%</td><td className="px-4 py-3 font-medium">{money(row.monto_comision)}</td><td className="px-4 py-3">{String(row.estado ?? "—")}</td></tr>)}</tbody></table>{rows.length === 0 && <p className="p-6 text-center text-sm text-gray-500">Aún no hay comisiones registradas para este periodo.</p>}</section></>}</Frame>;
 };
 
 export const VendorClientsPage: React.FC = () => {

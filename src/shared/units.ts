@@ -1,10 +1,13 @@
-export const SALES_UNITS = ['unidad', 'metro', 'yarda', 'docena', 'paquete', 'rollo'] as const;
+export const SALES_UNITS = ['vara', 'unidad', 'metro', 'yarda', 'docena', 'paquete', 'rollo'] as const;
 
 export type SalesUnit = (typeof SALES_UNITS)[number];
 
-export const unitAllowsFraction = (unit: string | null | undefined) => unit === 'metro' || unit === 'yarda';
+export const unitAllowsFraction = (unit: string | null | undefined) => unit === 'vara' || unit === 'metro' || unit === 'yarda';
+export const unitStep = (unit: string | null | undefined) => unit === 'vara' ? '0.25' : unitAllowsFraction(unit) ? '0.001' : '1';
+export const isValidUnitQuantity = (quantity: number, unit: string | null | undefined) => quantity > 0 && (unit === 'vara' ? Number.isInteger(quantity * 4) : unitAllowsFraction(unit) ? Number.isFinite(quantity) : Number.isInteger(quantity));
 
 const labels: Record<SalesUnit, { singular: string; plural: string }> = {
+  vara: { singular: 'vara', plural: 'varas' },
   unidad: { singular: 'unidad', plural: 'unidades' },
   metro: { singular: 'metro', plural: 'metros' },
   yarda: { singular: 'yarda', plural: 'yardas' },
