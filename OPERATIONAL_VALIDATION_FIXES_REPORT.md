@@ -68,18 +68,24 @@ Post-040 operational correction pass. No functional database changes were added,
 
 ## Production status
 
-This pass has not been deployed yet. Production reproduction of the original Caja and XLSX failures remains a required post-deploy smoke test. No claim is made here that the fixes are already verified in PROD.
+The XLSX hotfix is deployed in Netlify production from `main@9dd5e6b`.
+
+Production smoke validation passed:
+
+- Inventory XLSX downloaded successfully and was recognized as Microsoft Excel 2007+.
+- Sales XLSX downloaded successfully with the visible date range and passed archive integrity validation.
+- No production UI error remained after the browser-safe date normalization.
 
 ## Genuine remaining backend gaps
 
 - The current cash JSON contract has one aggregate `monedas` amount rather than separate coin denominations. A future schema/RPC change is needed only if the client requires coin-by-coin counting.
 - Expenses expose backend `created_at`, not a user-editable accounting date. Adding an editable date requires a future migration and an explicit business decision.
-- Browser-level production tests for close, Gastos loading, and Sales XLSX must be run after the single final deployment.
+- Caja and Gastos production smoke tests belong to the previous operational pass; this hotfix specifically closes the XLSX production gap.
 
 ## Status
 
 IMPLEMENTED LOCALLY: YES
 
-DEPLOYED TO PROD: NO
+DEPLOYED TO PROD: YES
 
-VERIFIED IN PROD: NO
+VERIFIED IN PROD: YES - XLSX Ventas e Inventario
