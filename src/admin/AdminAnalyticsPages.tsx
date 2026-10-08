@@ -5,7 +5,7 @@ import { adminService } from "./admin.service";
 import { friendlyAdminError } from "./admin.errors";
 import { supabase } from "../shared/lib/supabase";
 import { unitLabel } from "../shared/units";
-import { downloadExcel, toExcelDate } from "../shared/export/excel";
+import { downloadExcel, toExcelDate, toExcelDateText } from "../shared/export/excel";
 
 type JsonRow = Record<string, unknown>;
 type DashboardData = { kpis: Record<string, number>; sales_over_time: JsonRow[]; cost_profit_over_time: JsonRow[]; sales_by_branch: JsonRow[]; sales_by_seller: JsonRow[]; customer_type: JsonRow[]; products_sold: number };
@@ -84,7 +84,7 @@ export const AdminReportsPage: React.FC<{ embedded?: boolean }> = () => {
         const cost = costBySale.get(String(row.id)) ?? 0;
         const commission = commissionBySale.get(String(row.id)) ?? 0;
         const tipo = creditSales.has(String(row.id)) ? "Crédito" : "Contado";
-        return { fecha: saleDate, folio: String(row.id).slice(0, 8).toUpperCase(), cliente: relatedName(row.cliente), tipo_cliente: isRecord(row.cliente) && row.cliente.es_mayorista ? "Mayorista" : "Final", vendedor: relatedName(row.vendedor), sucursal: relatedName(row.sucursal), tipo_venta: tipo, total, costo_snapshot: cost, utilidad: total - cost, comision: commission, estado: row.entregada ? "entregada" : String(row.forma_pago ?? "registrada") };
+        return { fecha: toExcelDateText(saleDate), folio: String(row.id).slice(0, 8).toUpperCase(), cliente: relatedName(row.cliente), tipo_cliente: isRecord(row.cliente) && row.cliente.es_mayorista ? "Mayorista" : "Final", vendedor: relatedName(row.vendedor), sucursal: relatedName(row.sucursal), tipo_venta: tipo, total, costo_snapshot: cost, utilidad: total - cost, comision: commission, estado: row.entregada ? "entregada" : String(row.forma_pago ?? "registrada") };
       });
       const filteredData = filters.payment ? data.filter((row) => row.tipo_venta === (filters.payment === "credito" ? "Crédito" : "Contado")) : data;
       if (filteredData.length === 0) throw new Error("No hay datos para descargar.");
@@ -104,7 +104,7 @@ export const AdminReportsPage: React.FC<{ embedded?: boolean }> = () => {
         const stock = Number(row.stock ?? 0);
         const unit = String(product.unidad_venta ?? "unidad");
         const designs = Array.isArray(product.disenos) ? product.disenos.map((design) => String((design as JsonRow).nombre ?? "")).filter(Boolean).join(" | ") : relatedName(product.disenos);
-        return { "Fecha de corte": new Date(`${filters.to}T23:59:59`), SKU: String(product.sku ?? ""), Producto: String(product.nombre ?? ""), Diseño: designs, Sucursal: relatedName(row.sucursales), Unidad: unitLabel(unit, stock), "Stock real": stock };
+        return { "Fecha de corte": toExcelDateText(`${filters.to}T23:59:59`), SKU: String(product.sku ?? ""), Producto: String(product.nombre ?? ""), Diseño: designs, Sucursal: relatedName(row.sucursales), Unidad: unitLabel(unit, stock), "Stock real": stock };
       });
       await downloadExcel(`altix-inventario-${filters.to.slice(0, 7)}.xlsx`, "Inventario", data);
     } catch (err) { setError(friendlyAdminError(err, "No se pudo descargar el reporte de inventario.")); }

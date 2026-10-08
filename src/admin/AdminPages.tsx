@@ -11,7 +11,7 @@ import { useAuth } from "../auth/hooks/useAuth";
 import { AdminProfitDashboardPage, AdminReportsPage } from "./AdminAnalyticsPages";
 import { PrintDocumentButton } from "../shared/printing/PrintDocumentButton";
 import { ProductImage, type ProductImageSource } from "../shared/product-images";
-import { downloadExcel } from "../shared/export/excel";
+import { downloadExcel, toExcelDateText } from "../shared/export/excel";
 
 type AdminRow = Record<string, unknown>;
 type Branch = { id: string; nombre: string };
@@ -69,7 +69,7 @@ const AdminExportButton: React.FC<{
           const category = isRecord(product.categorias) ? product.categorias : {};
           const branch = isRecord(row.sucursales) ? row.sucursales : {};
           return {
-            "Fecha de corte": new Date(),
+            "Fecha de corte": toExcelDateText(new Date()),
             Sucursal: branch.nombre ?? "",
             SKU: product.sku ?? "",
             Producto: product.nombre ?? "",

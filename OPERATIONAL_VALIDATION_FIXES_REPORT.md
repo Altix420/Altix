@@ -44,10 +44,10 @@ Post-040 operational correction pass. No functional database changes were added,
 
 ### XLSX hotfix
 
-- Root cause: `write-excel-file` v4.1.1 rejects `Date` cells unless a `dateFormat` is provided. Both sales and inventory exports contained `Date` cells, so the shared helper failed before browser download.
-- Fixed `src/shared/export/excel.ts` to normalize text, finite numbers, valid dates, nulls, and unsupported values before building the sheet.
-- Added the shared `dateFormat: "dd/mm/yyyy hh:mm"` option and descriptive development-only console diagnostics.
-- Sales now rejects an invalid sale date instead of silently producing an incomplete mandatory date column.
+- Root cause: the production browser export still failed while serializing `Date` cells in the shared `write-excel-file` path, even with a valid global date format. Both sales and inventory exports used `Date` cells, so the helper failed before browser download.
+- Fixed `src/shared/export/excel.ts` to normalize text, finite numbers, valid dates, nulls, and unsupported values before building the sheet. Date cells are now emitted as ISO-readable text, avoiding the browser date serializer while preserving the mandatory date column.
+- Kept the shared `dateFormat` option for compatibility with any remaining typed date cell and retained descriptive development-only console diagnostics.
+- Sales rejects an invalid sale date instead of silently producing an incomplete mandatory date column.
 - The browser API remains `write-excel-file/browser`; no Node export API or CSV fallback was introduced.
 - Minimal workbook test with text, decimal, and date generated a valid XLSX archive; `unzip -t` passed.
 

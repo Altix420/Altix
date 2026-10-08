@@ -20,9 +20,15 @@ export const toExcelDate = (value: unknown): Date | null => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+export const toExcelDateText = (value: unknown): string => {
+  const date = toExcelDate(value);
+  if (!date) return "";
+  return date.toISOString().replace("T", " ").slice(0, 19);
+};
+
 const toExcelCell = (value: unknown): ExcelCell => {
   if (value == null) return null;
-  if (value instanceof Date) return toExcelDate(value);
+  if (value instanceof Date) return toExcelDateText(value);
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (typeof value === "string" || typeof value === "boolean") return value;
   return toExcelText(value);
