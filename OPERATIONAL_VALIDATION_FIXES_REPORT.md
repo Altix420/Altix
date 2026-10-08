@@ -42,6 +42,15 @@ Post-040 operational correction pass. No functional database changes were added,
 - Numeric values remain numbers and sale dates remain `Date` values for Excel.
 - Inventory export keeps only stock-oriented fields and adds `Fecha de corte`; it does not add sale dates, prices, costs, or monetary value.
 
+### XLSX hotfix
+
+- Root cause: `write-excel-file` v4.1.1 rejects `Date` cells unless a `dateFormat` is provided. Both sales and inventory exports contained `Date` cells, so the shared helper failed before browser download.
+- Fixed `src/shared/export/excel.ts` to normalize text, finite numbers, valid dates, nulls, and unsupported values before building the sheet.
+- Added the shared `dateFormat: "dd/mm/yyyy hh:mm"` option and descriptive development-only console diagnostics.
+- Sales now rejects an invalid sale date instead of silently producing an incomplete mandatory date column.
+- The browser API remains `write-excel-file/browser`; no Node export API or CSV fallback was introduced.
+- Minimal workbook test with text, decimal, and date generated a valid XLSX archive; `unzip -t` passed.
+
 ## Local validation
 
 - Authenticated local Gastos relationship query: HTTP 200.
@@ -55,6 +64,7 @@ Post-040 operational correction pass. No functional database changes were added,
 - `npm run build`: PASS.
 - `npm audit --audit-level=high`: 0 vulnerabilities.
 - `git diff --check`: PASS.
+- Minimal `write-excel-file` workbook: PASS; XLSX archive integrity verified.
 
 ## Production status
 

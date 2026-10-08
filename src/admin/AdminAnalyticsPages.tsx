@@ -5,7 +5,7 @@ import { adminService } from "./admin.service";
 import { friendlyAdminError } from "./admin.errors";
 import { supabase } from "../shared/lib/supabase";
 import { unitLabel } from "../shared/units";
-import { downloadExcel } from "../shared/export/excel";
+import { downloadExcel, toExcelDate } from "../shared/export/excel";
 
 type JsonRow = Record<string, unknown>;
 type DashboardData = { kpis: Record<string, number>; sales_over_time: JsonRow[]; cost_profit_over_time: JsonRow[]; sales_by_branch: JsonRow[]; sales_by_seller: JsonRow[]; customer_type: JsonRow[]; products_sold: number };
@@ -78,11 +78,13 @@ export const AdminReportsPage: React.FC<{ embedded?: boolean }> = () => {
       const commissionBySale = new Map<string, number>();
       (commissionsResult.data as unknown as JsonRow[]).forEach((row) => commissionBySale.set(String(row.venta_id), (commissionBySale.get(String(row.venta_id)) ?? 0) + Number(row.monto_comision ?? 0)));
       const data = sales.map((row) => {
+        const saleDate = toExcelDate(row.created_at);
+        if (!saleDate) throw new Error("Una venta no tiene una fecha válida para exportar.");
         const total = Number(row.total ?? 0);
         const cost = costBySale.get(String(row.id)) ?? 0;
         const commission = commissionBySale.get(String(row.id)) ?? 0;
         const tipo = creditSales.has(String(row.id)) ? "Crédito" : "Contado";
-        return { fecha: row.created_at ? new Date(String(row.created_at)) : null, folio: String(row.id).slice(0, 8).toUpperCase(), cliente: relatedName(row.cliente), tipo_cliente: isRecord(row.cliente) && row.cliente.es_mayorista ? "Mayorista" : "Final", vendedor: relatedName(row.vendedor), sucursal: relatedName(row.sucursal), tipo_venta: tipo, total, costo_snapshot: cost, utilidad: total - cost, comision: commission, estado: row.entregada ? "entregada" : String(row.forma_pago ?? "registrada") };
+        return { fecha: saleDate, folio: String(row.id).slice(0, 8).toUpperCase(), cliente: relatedName(row.cliente), tipo_cliente: isRecord(row.cliente) && row.cliente.es_mayorista ? "Mayorista" : "Final", vendedor: relatedName(row.vendedor), sucursal: relatedName(row.sucursal), tipo_venta: tipo, total, costo_snapshot: cost, utilidad: total - cost, comision: commission, estado: row.entregada ? "entregada" : String(row.forma_pago ?? "registrada") };
       });
       const filteredData = filters.payment ? data.filter((row) => row.tipo_venta === (filters.payment === "credito" ? "Crédito" : "Contado")) : data;
       if (filteredData.length === 0) throw new Error("No hay datos para descargar.");
