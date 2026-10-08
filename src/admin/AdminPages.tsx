@@ -15,6 +15,11 @@ import { downloadExcel } from "../shared/export/excel";
 
 type AdminRow = Record<string, unknown>;
 type Branch = { id: string; nombre: string };
+const searchableText = (value: unknown): string => {
+  if (Array.isArray(value)) return value.map(searchableText).join(" ");
+  if (isRecord(value)) return Object.values(value).map(searchableText).join(" ");
+  return String(value ?? "");
+};
 type Resource =
   | "ventas"
   | "cotizaciones"
@@ -64,6 +69,7 @@ const AdminExportButton: React.FC<{
           const category = isRecord(product.categorias) ? product.categorias : {};
           const branch = isRecord(row.sucursales) ? row.sucursales : {};
           return {
+            "Fecha de corte": new Date(),
             Sucursal: branch.nombre ?? "",
             SKU: product.sku ?? "",
             Producto: product.nombre ?? "",
@@ -251,12 +257,14 @@ const AdminCountDetail: React.FC<{ row: AdminRow; onClose: () => void }> = ({ ro
   return <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/30 p-4"><div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto border border-gray-200 bg-white p-5 shadow-xl"><div className="flex items-center justify-between border-b border-gray-200 pb-4"><div><h2 className="font-semibold">Detalle de conteo físico</h2><p className="mt-1 text-xs text-gray-500">{date(row.created_at)} · {renderValue(row.sucursales, "sucursales")}</p></div><button type="button" onClick={onClose} className="min-h-11 px-3 text-sm text-gray-500">Cerrar</button></div>{loading ? <State message="Cargando diferencias..." /> : <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[640px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr><th className="px-3 py-2">SKU</th><th className="px-3 py-2">Producto</th><th className="px-3 py-2">Unidad</th><th className="px-3 py-2">Sistema</th><th className="px-3 py-2">Físico</th><th className="px-3 py-2">Diferencia</th></tr></thead><tbody className="divide-y divide-gray-100">{items.map((item, index) => { const product = isRecord(item.productos) ? item.productos : {}; const difference = Number(item.diferencia ?? Number(item.stock_fisico ?? 0) - Number(item.stock_sistema ?? 0)); return <tr key={String(item.id ?? index)}><td className="px-3 py-2">{String(product.sku ?? "—")}</td><td className="px-3 py-2">{String(product.nombre ?? "—")}</td><td className="px-3 py-2">{String(product.unidad_venta ?? "unidad")}</td><td className="px-3 py-2">{String(item.stock_sistema ?? 0)}</td><td className="px-3 py-2">{String(item.stock_fisico ?? 0)}</td><td className={`px-3 py-2 font-semibold ${difference === 0 ? "text-green-700" : difference < 0 ? "text-red-700" : "text-amber-700"}`}>{difference > 0 ? "+" : ""}{difference}</td></tr>; })}</tbody></table>{items.length === 0 && <p className="p-6 text-center text-sm text-gray-500">Este conteo aún no tiene detalle guardado.</p>}</div>}</div></div>;
 };
 
-async function loadRows(resource: Resource, module?: string): Promise<AdminRow[]> {
+async function loadRows(resource: Resource, module?: string, dateRange?: { from: string; to: string }): Promise<AdminRow[]> {
   switch (resource) {
     case "ventas": {
       const result = await supabase
         .from("ventas")
-        .select("*, clientes(nombre,es_mayorista), sucursales(nombre), profiles!ventas_vendedor_id_fkey(nombre_completo)")
+        .select("*, clientes(nombre,es_mayorista,nit_dpi,telefono), sucursales(nombre), profiles!ventas_vendedor_id_fkey(nombre_completo)")
+        .gte("created_at", `${dateRange?.from ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)}T00:00:00`)
+        .lte("created_at", `${dateRange?.to ?? new Date().toISOString().slice(0, 10)}T23:59:59.999`)
         .order("created_at", { ascending: false });
       if (result.error) throw result.error;
       const sales = rows(result.data);
@@ -340,7 +348,7 @@ async function loadRows(resource: Resource, module?: string): Promise<AdminRow[]
     case "gastos": {
       const result = await supabase
         .from("gastos")
-        .select("*, sucursales(nombre), profiles!gastos_registrado_por_fkey(nombre_completo)")
+        .select("*, sucursal_origen:sucursales!gastos_sucursal_id_fkey(nombre), sucursal_imputada:sucursales!gastos_sucursal_imputada_id_fkey(nombre), profiles!gastos_registrado_por_fkey(nombre_completo)")
         .order("created_at", { ascending: false });
       if (result.error) throw result.error;
       return rows(result.data);
@@ -593,10 +601,12 @@ const configs: Record<
     title: "Gastos",
     description: "Gastos registrados y resolución de autorización.",
     resource: "gastos",
+    headerAction: "cash-expense",
     columns: [
       ["Fecha", "created_at"],
       ["Categoría", "categoria"],
       ["Concepto", "descripcion"],
+      ["Sucursal imputada", "sucursal_imputada"],
       ["Monto", "monto"],
       ["Estado", "estado"],
     ],
@@ -793,10 +803,11 @@ const AdminApprovalsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"pendiente" | "historial">("pendiente");
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     const [approvalRows, profileRows, branchRows] = await Promise.all([
-      supabase.from("aprobaciones").select("*").order("estado").order("created_at", { ascending: false }),
+      supabase.from("aprobaciones").select("*").in("estado", statusFilter === "pendiente" ? ["pendiente"] : ["aprobada", "rechazada"]).order("created_at", { ascending: false }),
       supabase.from("profiles").select("id,nombre_completo"),
       supabase.from("sucursales").select("id,nombre"),
     ]);
@@ -808,7 +819,7 @@ const AdminApprovalsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false
       setBranches(Object.fromEntries((branchRows.data ?? []).map((item) => [item.id, item.nombre])));
     }
     setLoading(false);
-  }, []);
+  }, [statusFilter]);
   useEffect(() => { void load(); }, [load]);
   const resolve = async (item: AdminRow, approve: boolean) => {
     if (!profile?.id || !window.confirm(`${approve ? "Aprobar" : "Rechazar"} esta solicitud?`)) return;
@@ -827,7 +838,7 @@ const AdminApprovalsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false
     } catch (err) { setError(friendlyAdminError(err, "No se pudo resolver la solicitud.")); }
     finally { setBusy(null); }
   };
-  return <PageFrame title="Centro de aprobaciones" description="Solicitudes pendientes y resoluciones trazables." showHeader={!embedded} onRefresh={() => void load()}>{error && <p className="mb-4 border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}{success && <p className="mb-4 border border-green-200 bg-green-50 p-3 text-sm text-green-700">{success}</p>}{loading ? <State message="Cargando solicitudes..." /> : items.length === 0 ? <State message="No hay solicitudes registradas." /> : <div className="overflow-x-auto border border-gray-200 bg-white"><table className="w-full min-w-[1100px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr>{["Estado", "Tipo", "Solicitante", "Sucursal", "Referencia", "Valor", "Motivo", "Creada", "Revisión", "Acciones"].map((label) => <th key={label} className="px-4 py-3">{label}</th>)}</tr></thead><tbody className="divide-y divide-gray-100">{items.map((item) => { const pending = item.estado === "pendiente"; return <tr key={String(item.id)} className={pending ? "bg-amber-50/30" : ""}><td className="px-4 py-3 font-medium">{String(item.estado)}</td><td className="px-4 py-3">{String(item.tipo)}</td><td className="px-4 py-3">{profiles[String(item.solicitante_id)] ?? "Usuario"}</td><td className="px-4 py-3">{branches[String(item.sucursal_id)] ?? "Sucursal"}</td><td className="px-4 py-3"><details><summary className="cursor-pointer text-blue-700">Ver</summary><span className="text-xs text-gray-500">{String(item.referencia_tabla ?? "—")} · #{String(item.referencia_id ?? "").slice(0, 8).toUpperCase()}</span><ApprovalDetails item={item} /></details></td><td className="px-4 py-3">{item.valor_solicitado == null ? "—" : money(item.valor_solicitado)}</td><td className="max-w-[240px] truncate px-4 py-3">{String(item.motivo)}</td><td className="px-4 py-3">{date(item.created_at)}</td><td className="max-w-[180px] truncate px-4 py-3">{String(item.nota_resolucion ?? "—")}</td><td className="px-4 py-3">{pending ? <div className="flex gap-2"><button type="button" disabled={busy === String(item.id)} onClick={() => void resolve(item, true)} className="border border-green-300 px-2 py-1 text-xs text-green-700 disabled:opacity-50">Aprobar</button><button type="button" disabled={busy === String(item.id)} onClick={() => void resolve(item, false)} className="border border-red-300 px-2 py-1 text-xs text-red-700 disabled:opacity-50">Rechazar</button></div> : <span className="text-xs text-gray-500">Resuelta</span>}</td></tr>; })}</tbody></table></div>}</PageFrame>;
+  return <PageFrame title="Centro de aprobaciones" description="Solicitudes pendientes y resoluciones trazables." showHeader={!embedded} onRefresh={() => void load()}>{error && <p className="mb-4 border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}{success && <p className="mb-4 border border-green-200 bg-green-50 p-3 text-sm text-green-700">{success}</p>}<div className="mb-4 flex items-center gap-2"><label className="text-sm text-gray-600">Vista<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "pendiente" | "historial")} className="ml-2 border border-gray-300 bg-white px-3 py-2 text-sm"><option value="pendiente">Pendientes</option><option value="historial">Historial resuelto</option></select></label></div>{loading ? <State message="Cargando solicitudes..." /> : items.length === 0 ? <State message={statusFilter === "pendiente" ? "No hay solicitudes pendientes." : "No hay solicitudes resueltas."} /> : <div className="overflow-x-auto border border-gray-200 bg-white"><table className="w-full min-w-[1100px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr>{["Estado", "Tipo", "Solicitante", "Sucursal", "Referencia", "Valor", "Motivo", "Creada", "Revisión", "Acciones"].map((label) => <th key={label} className="px-4 py-3">{label}</th>)}</tr></thead><tbody className="divide-y divide-gray-100">{items.map((item) => { const pending = item.estado === "pendiente"; return <tr key={String(item.id)} className={pending ? "bg-amber-50/30" : ""}><td className="px-4 py-3 font-medium">{String(item.estado)}</td><td className="px-4 py-3">{String(item.tipo)}</td><td className="px-4 py-3">{profiles[String(item.solicitante_id)] ?? "Usuario"}</td><td className="px-4 py-3">{branches[String(item.sucursal_id)] ?? "Sucursal"}</td><td className="px-4 py-3"><details><summary className="cursor-pointer text-blue-700">Ver</summary><span className="text-xs text-gray-500">{String(item.referencia_tabla ?? "—")} · #{String(item.referencia_id ?? "").slice(0, 8).toUpperCase()}</span><ApprovalDetails item={item} /></details></td><td className="px-4 py-3">{item.valor_solicitado == null ? "—" : money(item.valor_solicitado)}</td><td className="max-w-[240px] truncate px-4 py-3">{String(item.motivo)}</td><td className="px-4 py-3">{date(item.created_at)}</td><td className="max-w-[180px] truncate px-4 py-3">{String(item.nota_resolucion ?? "—")}</td><td className="px-4 py-3">{pending ? <div className="flex gap-2"><button type="button" disabled={busy === String(item.id)} onClick={() => void resolve(item, true)} className="border border-green-300 px-2 py-1 text-xs text-green-700 disabled:opacity-50">Aprobar</button><button type="button" disabled={busy === String(item.id)} onClick={() => void resolve(item, false)} className="border border-red-300 px-2 py-1 text-xs text-red-700 disabled:opacity-50">Rechazar</button></div> : <span className="text-xs text-gray-500">Resuelta</span>}</td></tr>; })}</tbody></table></div>}</PageFrame>;
 };
 
 const ApprovalDetails: React.FC<{ item: AdminRow }> = ({ item }) => {
@@ -924,6 +935,8 @@ const AdminDataListPage: React.FC<{ module: string; embedded?: boolean }> = ({
   const [success, setSuccess] = useState<string | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchId, setBranchId] = useState("");
+  const [salesFrom, setSalesFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
+  const [salesTo, setSalesTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [saleDetail, setSaleDetail] = useState<AdminRow | null>(null);
   const [countDetail, setCountDetail] = useState<AdminRow | null>(null);
 
@@ -931,13 +944,13 @@ const AdminDataListPage: React.FC<{ module: string; embedded?: boolean }> = ({
     setLoading(true);
     setError(null);
     try {
-      setData(await loadRows(config.resource, module));
+      setData(await loadRows(config.resource, module, module === "ventas" ? { from: salesFrom, to: salesTo } : undefined));
     } catch (err) {
       setError(friendlyAdminError(err, "No se pudo cargar la información."));
     } finally {
       setLoading(false);
     }
-  }, [config.resource, module]);
+  }, [config.resource, module, salesFrom, salesTo]);
   // The initial fetch synchronizes the page with the selected backend resource.
   // eslint-disable-next-line react/set-state-in-effect
   useEffect(() => {
@@ -961,7 +974,7 @@ const AdminDataListPage: React.FC<{ module: string; embedded?: boolean }> = ({
     if (!needle) return branchFiltered;
     return branchFiltered.filter((row) =>
       Object.values(row).some((value) =>
-        String(value ?? "")
+        searchableText(value)
           .toLowerCase()
           .includes(needle),
       ),
@@ -1025,12 +1038,13 @@ const AdminDataListPage: React.FC<{ module: string; embedded?: boolean }> = ({
             className="w-full border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-blue-600"
           />
         </div>
+        {module === "ventas" && <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500"><label>Desde<input type="date" value={salesFrom} onChange={(event) => setSalesFrom(event.target.value)} className="ml-1 border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900" /></label><label>Hasta<input type="date" value={salesTo} onChange={(event) => setSalesTo(event.target.value)} className="ml-1 border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900" /></label><button type="button" onClick={() => { const now = new Date(); setSalesFrom(new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10)); setSalesTo(new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10)); }} className="border border-gray-300 px-2 py-2 text-sm text-gray-700">Mes anterior</button></div>}
       </div>
       {loading && <State message="Cargando información..." />}
       {error && (
         <div className="flex items-center justify-between border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <span className="flex items-center gap-2">
-            <CircleAlert size={16} /> No se pudo cargar esta vista.
+            <CircleAlert size={16} /> {error}
           </span>
           <button onClick={() => void load()} className="font-medium underline">
             Reintentar

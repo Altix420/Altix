@@ -455,6 +455,20 @@ export const VendorPosPage: React.FC = () => {
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    const needle = clientSearch.trim().replace(/[%,()]/g, " ").replace(/\s+/g, " ");
+    if (!needle) return;
+    void supabase
+      .from("clientes")
+      .select("*")
+      .or(`nombre.ilike.%${needle}%,nit_dpi.ilike.%${needle}%,telefono.ilike.%${needle}%`)
+      .order("nombre")
+      .limit(100)
+      .then((result) => {
+        if (result.error) setError(friendlyAdminError(result.error, "No se pudieron buscar los clientes."));
+        else setClients((result.data ?? []) as Client[]);
+      });
+  }, [clientSearch]);
   // Catalog navigation passes only a product id; this selects local data without creating a sale.
   // eslint-disable-next-line react/set-state-in-effect
   useEffect(() => {
@@ -1461,6 +1475,20 @@ export const VendorClientsPage: React.FC = () => {
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    const needle = search.trim().replace(/[%,()]/g, " ").replace(/\s+/g, " ");
+    if (!needle) return;
+    void supabase
+      .from("clientes")
+      .select("*")
+      .or(`nombre.ilike.%${needle}%,nit_dpi.ilike.%${needle}%,telefono.ilike.%${needle}%`)
+      .order("nombre")
+      .limit(100)
+      .then((result) => {
+        if (result.error) setError(friendlyAdminError(result.error, "No se pudieron buscar los clientes."));
+        else setClients((result.data ?? []) as Client[]);
+      });
+  }, [search]);
   const filtered = clients.filter((client) =>
     `${client.nombre} ${client.nit_dpi ?? ""} ${client.telefono ?? ""}`
       .toLowerCase()

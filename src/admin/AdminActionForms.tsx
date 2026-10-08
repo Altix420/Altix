@@ -134,13 +134,20 @@ export const AdminActionButton: React.FC<{
   // eslint-disable-next-line react/set-state-in-effect
   useEffect(() => {
     if (!open) return;
-    if (action === "inventory-transfer" || action === "cash-open" || action === "count-create")
+    if (action === "inventory-transfer" || action === "cash-open" || action === "count-create" || action === "cash-expense")
       void supabase
         .from("sucursales")
         .select("id,nombre")
         .eq("activa", true)
         .order("nombre")
         .then((result) => setBranches((result.data ?? []) as Branch[]));
+    if (action === "cash-expense" && !row.id)
+      void supabase
+        .from("sesiones_caja")
+        .select("id,sucursal_id")
+        .eq("estado", "abierta")
+        .order("fecha_apertura", { ascending: false })
+        .then((result) => setOpenSessions((result.data ?? []) as Array<{ id: string; sucursal_id: string }>));
     // The modal fetch must expose progress immediately while the selected row is loading.
     // eslint-disable-next-line react/set-state-in-effect
     if (action === "sale-return" && row.id) {
@@ -237,18 +244,23 @@ export const AdminActionButton: React.FC<{
           } as Json,
         });
       if (action === "cash-expense")
-        await adminService.registrarGasto({
-          p_sesion_caja_id: String(row.id),
-          p_sucursal_id: String(row.sucursal_id ?? sucursalActiva?.id ?? ""),
-          p_categoria: text("categoria"),
-          p_monto: number("monto"),
-          p_descripcion: text("descripcion"),
-          p_comprobante_url: text("comprobante_url"),
-          p_registrado_por: profile.id,
-          p_observacion: text("observacion") || undefined,
-          p_operation_id: createOperationId("gasto"),
-          p_sucursal_imputada_id: text("sucursal_imputada_id") || String(row.sucursal_id ?? sucursalActiva?.id ?? ""),
-        } as never);
+        await (async () => {
+          const sessionId = text("sesion_caja_id") || String(row.id ?? "");
+          const sourceBranch = openSessions.find((session) => session.id === sessionId)?.sucursal_id || String(row.sucursal_id ?? sucursalActiva?.id ?? "");
+          if (!sessionId || !sourceBranch) throw new Error("Selecciona una caja abierta de origen.");
+          return adminService.registrarGasto({
+            p_sesion_caja_id: sessionId,
+            p_sucursal_id: sourceBranch,
+            p_categoria: text("categoria"),
+            p_monto: number("monto"),
+            p_descripcion: text("descripcion"),
+            p_comprobante_url: text("comprobante_url"),
+            p_registrado_por: profile.id,
+            p_observacion: text("observacion") || undefined,
+            p_operation_id: createOperationId("gasto"),
+            p_sucursal_imputada_id: text("sucursal_imputada_id") || sourceBranch,
+          } as never);
+        })();
       if (action === "cash-movement")
         await adminService.registrarMovimientoCaja({
           p_sesion_caja_id: String(row.id),
@@ -493,7 +505,7 @@ export const AdminActionButton: React.FC<{
                   ["q20", "Billetes Q20"],
                   ["q10", "Billetes Q10"],
                   ["q5", "Billetes Q5"],
-                  ["monedas", "Monedas (Q)"],
+                  ["monedas", "Monedas (monto total Q)"],
                 ].map(([name, label]) => (
                   <Field key={name} label={label}>
                     <input
@@ -511,7 +523,8 @@ export const AdminActionButton: React.FC<{
             )}
             {action === "cash-expense" && (
               <>
-                {profile?.role === "administrador" && <Field label="Sucursal imputada *"><select name="sucursal_imputada_id" required defaultValue={String(row.sucursal_id ?? "")} className={input}><option value="">Selecciona una sucursal</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.nombre}</option>)}</select></Field>}
+                {!row.id && <Field label="Caja de origen *"><select name="sesion_caja_id" required className={input}><option value="">Selecciona una caja abierta</option>{openSessions.map((session) => <option key={session.id} value={session.id}>{branches.find((branch) => branch.id === session.sucursal_id)?.nombre ?? "Sucursal"} · sesión abierta</option>)}</select></Field>}
+                {profile?.role === "administrador" && <Field label="Sucursal imputada *"><select name="sucursal_imputada_id" required defaultValue={String(row.sucursal_imputada_id ?? row.sucursal_id ?? "")} className={input}><option value="">Selecciona una sucursal</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.nombre}</option>)}</select></Field>}
                 <Field label="Categoría *">
                   <input name="categoria" required className={input} />
                 </Field>

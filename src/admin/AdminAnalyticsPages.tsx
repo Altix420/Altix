@@ -51,11 +51,12 @@ export const AdminReportsPage: React.FC<{ embedded?: boolean }> = () => {
   const exportSales = async () => {
     setError(null);
     try {
-      const salesQuery = supabase.from("ventas").select("id,created_at,total,entregada,forma_pago,cliente:clientes(nombre,es_mayorista),vendedor:profiles!ventas_vendedor_id_fkey(nombre_completo),sucursal:sucursales(nombre)").gte("created_at", `${filters.from}T00:00:00`).lte("created_at", `${filters.to}T23:59:59.999`).order("created_at", { ascending: false });
+      if (!filters.from || !filters.to || filters.from > filters.to) throw new Error("El rango de fechas del reporte no es válido.");
+      const salesQuery = supabase.from("ventas").select("id,created_at,total,entregada,forma_pago,cliente:clientes!ventas_cliente_id_fkey(nombre,es_mayorista),vendedor:profiles!ventas_vendedor_id_fkey(nombre_completo),sucursal:sucursales!ventas_sucursal_id_fkey(nombre)").gte("created_at", `${filters.from}T00:00:00`).lte("created_at", `${filters.to}T23:59:59.999`).order("created_at", { ascending: false });
       const filteredSalesQuery = filters.branch ? salesQuery.eq("sucursal_id", filters.branch) : salesQuery;
       const filteredBySeller = filters.seller ? filteredSalesQuery.eq("vendedor_id", filters.seller) : filteredSalesQuery;
       const salesResult = await filteredBySeller;
-      if (salesResult.error) throw salesResult.error;
+      if (salesResult.error) throw new Error("No se pudieron consultar las ventas del período.");
       const sales = (salesResult.data ?? []) as unknown as JsonRow[];
       const ids = sales.map((row) => String(row.id));
       if (ids.length === 0) throw new Error("No hay datos para descargar.");
@@ -64,9 +65,9 @@ export const AdminReportsPage: React.FC<{ embedded?: boolean }> = () => {
         supabase.from("comisiones").select("venta_id,monto_comision,estado").in("venta_id", ids),
         supabase.from("cuentas_cobrar").select("venta_id,saldo_pendiente").in("venta_id", ids),
       ]);
-      if (itemsResult.error) throw itemsResult.error;
-      if (commissionsResult.error) throw commissionsResult.error;
-      if (creditResult.error) throw creditResult.error;
+      if (itemsResult.error) throw new Error("No se pudieron consultar los costos de las ventas.");
+      if (commissionsResult.error) throw new Error("No se pudieron consultar las comisiones de las ventas.");
+      if (creditResult.error) throw new Error("No se pudo consultar el estado de crédito de las ventas.");
       const creditSales = new Set((creditResult.data ?? []).map((row) => String(row.venta_id)));
       const costBySale = new Map<string, number>();
       (itemsResult.data as unknown as JsonRow[]).forEach((item) => {
@@ -84,6 +85,7 @@ export const AdminReportsPage: React.FC<{ embedded?: boolean }> = () => {
         return { fecha: row.created_at ? new Date(String(row.created_at)) : null, folio: String(row.id).slice(0, 8).toUpperCase(), cliente: relatedName(row.cliente), tipo_cliente: isRecord(row.cliente) && row.cliente.es_mayorista ? "Mayorista" : "Final", vendedor: relatedName(row.vendedor), sucursal: relatedName(row.sucursal), tipo_venta: tipo, total, costo_snapshot: cost, utilidad: total - cost, comision: commission, estado: row.entregada ? "entregada" : String(row.forma_pago ?? "registrada") };
       });
       const filteredData = filters.payment ? data.filter((row) => row.tipo_venta === (filters.payment === "credito" ? "Crédito" : "Contado")) : data;
+      if (filteredData.length === 0) throw new Error("No hay datos para descargar.");
       await downloadExcel(`altix-ventas-${filters.from}-${filters.to}.xlsx`, "Ventas", filteredData);
     } catch (err) { setError(friendlyAdminError(err, "No se pudo descargar el reporte de ventas.")); }
   };
@@ -100,7 +102,7 @@ export const AdminReportsPage: React.FC<{ embedded?: boolean }> = () => {
         const stock = Number(row.stock ?? 0);
         const unit = String(product.unidad_venta ?? "unidad");
         const designs = Array.isArray(product.disenos) ? product.disenos.map((design) => String((design as JsonRow).nombre ?? "")).filter(Boolean).join(" | ") : relatedName(product.disenos);
-        return { SKU: String(product.sku ?? ""), Producto: String(product.nombre ?? ""), Diseño: designs, Sucursal: relatedName(row.sucursales), Unidad: unitLabel(unit, stock), "Stock real": stock };
+        return { "Fecha de corte": new Date(`${filters.to}T23:59:59`), SKU: String(product.sku ?? ""), Producto: String(product.nombre ?? ""), Diseño: designs, Sucursal: relatedName(row.sucursales), Unidad: unitLabel(unit, stock), "Stock real": stock };
       });
       await downloadExcel(`altix-inventario-${filters.to.slice(0, 7)}.xlsx`, "Inventario", data);
     } catch (err) { setError(friendlyAdminError(err, "No se pudo descargar el reporte de inventario.")); }
