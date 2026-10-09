@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../auth/hooks/useAuth";
 import { adminService } from "./admin.service";
+import { FFERSSI_CENTRAL_BRANCH_ID } from "../shared/config";
 import { supabase } from "../shared/lib/supabase";
 import { friendlyAdminError } from "./admin.errors";
 import type { Json } from "../shared/types/database.types";
@@ -143,7 +144,7 @@ export const AdminActionButton: React.FC<{
         .order("nombre")
         .then((result) => setBranches((result.data ?? []) as Branch[]));
     if (action === "cash-expense")
-      void supabase.from("sucursales").select("id,nombre").eq("activa", true).eq("nombre", "FFERSSI Central").maybeSingle()
+      void supabase.from("sucursales").select("id,nombre").eq("activa", true).eq("id", FFERSSI_CENTRAL_BRANCH_ID).maybeSingle()
         .then((result) => setCentralBranch((result.data as Branch | null) ?? null));
     if (action === "cash-expense" && !row.id)
       void supabase
@@ -251,7 +252,7 @@ export const AdminActionButton: React.FC<{
         await (async () => {
           const sessionId = text("sesion_caja_id") || String(row.id ?? "");
           const sourceBranch = openSessions.find((session) => session.id === sessionId)?.sucursal_id || String(row.sucursal_id ?? sucursalActiva?.id ?? "");
-          if (!row.id && (!centralBranch || sourceBranch !== centralBranch.id)) throw new Error("FFERSSI Central no tiene una caja abierta disponible para registrar el gasto.");
+          if (!row.id && (!centralBranch || sourceBranch !== FFERSSI_CENTRAL_BRANCH_ID)) throw new Error("FFERSSI Central no tiene una caja abierta disponible para registrar el gasto.");
           if (!sessionId || !sourceBranch) throw new Error("Selecciona una caja abierta de origen.");
           return adminService.registrarGasto({
             p_sesion_caja_id: sessionId,

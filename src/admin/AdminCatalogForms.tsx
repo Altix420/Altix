@@ -158,13 +158,12 @@ export const AdminDesignsPage: React.FC = () => {
       const value = Number(String(form.get(name) ?? "").replace(",", "."));
       return Number.isFinite(value) && value >= 0 ? value : null;
     };
-    const precio = parseMoney("precio");
     const precioBase = parseMoney("precio_base");
     const precioMayorista = parseMoney("precio_mayorista");
     const costoUnitario = parseMoney("costo_unitario");
     const productoId = String(form.get("producto_id") || "");
-    if (!productoId || precio === null || precioBase === null || precioMayorista === null || costoUnitario === null) {
-      setError("Completa producto, precio del diseño, precio base, precio mayorista y costo con valores válidos.");
+    if (!productoId || precioBase === null || precioMayorista === null || costoUnitario === null) {
+      setError("Completa producto, precio base, precio mayorista y costo con valores válidos.");
       setSaving(false);
       return;
     }
@@ -183,7 +182,7 @@ export const AdminDesignsPage: React.FC = () => {
         p_producto_id: productoId,
         p_archivo_url: uploaded.path || undefined,
         p_archivo_id: uploaded.archivoId,
-        p_precio: precio,
+        p_precio: precioBase,
         p_precio_base: precioBase,
         p_precio_mayorista: precioMayorista,
         p_costo_unitario: costoUnitario,
@@ -383,16 +382,6 @@ export const AdminDesignsPage: React.FC = () => {
                     </option>
                   ))}
                 </select>
-              </Field>
-              <Field label="Precio">
-                <input
-                  name="precio"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  defaultValue={editing?.precio ?? 0}
-                  className={inputClass}
-                />
               </Field>
               <Field label="Precio base *">
                 <input name="precio_base" required type="number" min="0" step="0.01" defaultValue={editingProduct?.precio_base ?? 0} className={inputClass} />

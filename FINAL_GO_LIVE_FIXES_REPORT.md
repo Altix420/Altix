@@ -38,3 +38,12 @@ La semilla local contiene `Sucursal Central - Huehuetenango`, Norte y Sur; no co
 ## Criterio de cierre
 
 No marcar go-live completo hasta validar en producción la cotización con `1`, `4`, `1.25`, `10.25`, `1,25`, extras nuevos, descuento aprobado, diseño con precio/costo y gasto cuyo origen sea `FFERSSI Central`.
+
+## Hotfix posterior
+
+- Causa confirmada del extra que no sumaba: el cliente enviaba `extra_ids`, mientras `crear_cotizacion` lee el arreglo contractual `extras`. La RPC interpretaba la línea como si no tuviera extra.
+- Se añadió `normalizeExtra` para convertir respuestas antiguas y nuevas a `{ id, nombre, precioAdicional, activo }`, rechazando `null`, `undefined`, `NaN` y precios no numéricos.
+- La cotización envía ahora `extras` con snapshot de `precio_adicional`; el backend vuelve a validar el precio contra el catálogo y persiste `cotizacion_item_extras`.
+- FFERSSI Central usa la constante compartida `86dea3fb-4d59-4d86-9ef6-73faaab80198`; no se busca solo por nombre ni se repite el UUID en componentes.
+- El formulario de diseño ya no muestra `Precio`; conserva únicamente Precio base, Precio mayorista y Costo. El valor interno `disenos.precio` se deriva de Precio base para mantener una sola fuente visible.
+- No se creó migración 042.

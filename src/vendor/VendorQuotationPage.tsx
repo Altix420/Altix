@@ -8,11 +8,11 @@ import type { Json } from "../shared/types/database.types";
 import { vendorService } from "./vendor.service";
 import { formatQuantity, isValidUnitQuantity, parseSalesPrice, parseSalesQuantity, pricePerUnit, unitAllowsFraction, unitMin, unitStep, type SalesUnit } from "../shared/units";
 import { ProductImage, type ProductImageSource } from "../shared/product-images";
+import { extraPrice, normalizeExtra, type ExtraRecord } from "../shared/extras";
 
 type Client = { id: string; nombre: string; nit_dpi: string | null; es_mayorista: boolean | null };
 type Product = { id: string; sku: string; nombre: string; precio_base: number; precio_mayorista: number; unidad_venta: SalesUnit; archivo_id: string | null; archivos?: { path?: string | null } | null; disenos?: Array<{ archivo_url?: string | null; archivos?: { path?: string | null } | null }> | null };
 type Design = { id: string; nombre: string; precio: number; producto_id: string | null; archivo_url?: string | null; archivos?: { path?: string | null } | null };
-type Extra = { id: string; nombre: string; precio_adicional: number; activo: boolean | null };
 type QuoteLine = {
   producto_id: string;
   diseno_id: string;
@@ -34,7 +34,7 @@ export const VendorQuotationPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [designs, setDesigns] = useState<Design[]>([]);
-  const [extras, setExtras] = useState<Extra[]>([]);
+  const [extras, setExtras] = useState<ExtraRecord[]>([]);
   const [approvalReason, setApprovalReason] = useState("");
   const [clientId, setClientId] = useState("");
   const [payment, setPayment] = useState<"efectivo" | "credito">("efectivo");
@@ -64,7 +64,7 @@ export const VendorQuotationPage: React.FC = () => {
         setClients((clientRows.data ?? []) as Client[]);
         setProducts((productRows.data ?? []) as Product[]);
         setDesigns((designRows.data ?? []) as Design[]);
-        setExtras((extraRows.data ?? []) as Extra[]);
+        setExtras((extraRows.data ?? []).map((extra) => normalizeExtra(extra)).filter((extra): extra is ExtraRecord => extra !== null));
       }
       setLoading(false);
     });
@@ -81,7 +81,7 @@ export const VendorQuotationPage: React.FC = () => {
     const design = designs.find((item) => item.id === designId);
     const productPrice = product ? (client?.es_mayorista ? product.precio_mayorista : product.precio_base) : 0;
     const basePrice = design ? design.precio : productPrice;
-    const extraTotal = extraIds.reduce((sum, extraId) => sum + Number(extras.find((item) => item.id === extraId)?.precio_adicional ?? 0), 0);
+    const extraTotal = extraIds.reduce((sum, extraId) => sum + (extraPrice(extras, extraId) ?? 0), 0);
     return Number((basePrice + extraTotal).toFixed(2));
   };
   const chooseProduct = (productId: string) => {
@@ -156,9 +156,9 @@ export const VendorQuotationPage: React.FC = () => {
         p_items: lines.map((item) => ({
           producto_id: item.producto_id || null,
           diseno_id: item.diseno_id || null,
-          extra_ids: item.extra_ids.map((extraId) => ({
+          extras: item.extra_ids.map((extraId) => ({
             extra_id: extraId,
-            precio_adicional: Number(extras.find((extra) => extra.id === extraId)?.precio_adicional ?? 0),
+            precio_adicional: extraPrice(extras, extraId),
           })),
           cantidad: item.cantidad,
           unidad_venta: item.unidad_venta,
@@ -172,10 +172,10 @@ export const VendorQuotationPage: React.FC = () => {
             extras: item.extra_ids.map((extraId) => ({
               id: extraId,
               nombre: extras.find((extra) => extra.id === extraId)?.nombre ?? null,
-              precio_adicional: Number(extras.find((extra) => extra.id === extraId)?.precio_adicional ?? 0),
+              precio_adicional: extraPrice(extras, extraId),
             })),
             unidad_venta: item.unidad_venta,
-            precio_base_unitario: Number((item.precio_oficial - item.extra_ids.reduce((sum, extraId) => sum + Number(extras.find((extra) => extra.id === extraId)?.precio_adicional ?? 0), 0)).toFixed(2)),
+            precio_base_unitario: Number((item.precio_oficial - item.extra_ids.reduce((sum, extraId) => sum + (extraPrice(extras, extraId) ?? 0), 0)).toFixed(2)),
             precio_oficial: item.precio_oficial,
             precio_negociado: Number(item.precio_negociado),
             total_linea_oficial: Number((Number(item.cantidad) * item.precio_oficial).toFixed(2)),
@@ -213,7 +213,7 @@ export const VendorQuotationPage: React.FC = () => {
             <label className="text-sm">Producto<select value={line.producto_id} onChange={(event) => chooseProduct(event.target.value)} className={`${input} mt-1`}><option value="">Sin producto</option>{products.map((product) => <option key={product.id} value={product.id}>{product.sku} · {product.nombre}</option>)}</select></label>
             <label className="text-sm">Diseño oficial<select value={line.diseno_id} onChange={(event) => chooseDesign(event.target.value)} className={`${input} mt-1`}><option value="">Sin diseño</option>{designs.map((design) => <option key={design.id} value={design.id}>{design.nombre} · {money(design.precio)}</option>)}</select></label>
             {(selectedLineProduct || selectedLineDesign) && <div className="flex items-center gap-3 border border-gray-100 bg-gray-50 p-3 text-sm sm:col-span-2"><ProductImage product={(selectedLineProduct ?? selectedLineDesign) as ProductImageSource} alt={selectedLineProduct?.nombre ?? selectedLineDesign?.nombre ?? "Producto"} className="h-16 w-16" /><div><p className="font-medium">{selectedLineProduct?.nombre ?? selectedLineDesign?.nombre}</p><p className="text-xs text-gray-500">{selectedLineProduct?.sku ?? "Diseño"} · {pricePerUnit(line.precio_oficial, line.unidad_venta)}</p></div></div>}
-            <fieldset className="text-sm sm:col-span-2"><legend>Extras adicionales</legend><div className="mt-1 grid gap-2 border border-gray-200 p-3 sm:grid-cols-2">{extras.map((extra) => <label key={extra.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={line.extra_ids.includes(extra.id)} onChange={(event) => { const extraIds = event.target.checked ? [...line.extra_ids, extra.id] : line.extra_ids.filter((id) => id !== extra.id); const official = getOfficialPrice(line.producto_id, line.diseno_id, extraIds); setLine({ ...line, extra_ids: extraIds, precio_unitario: official, precio_negociado: official, precio_oficial: official, descuento: 0 }); }} /><span>{extra.nombre} · {money(extra.precio_adicional)}</span></label>)}</div></fieldset>
+            <fieldset className="text-sm sm:col-span-2"><legend>Extras adicionales</legend><div className="mt-1 grid gap-2 border border-gray-200 p-3 sm:grid-cols-2">{extras.map((extra) => <label key={extra.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={line.extra_ids.includes(extra.id)} onChange={(event) => { const extraIds = event.target.checked ? [...line.extra_ids, extra.id] : line.extra_ids.filter((id) => id !== extra.id); const official = getOfficialPrice(line.producto_id, line.diseno_id, extraIds); setLine({ ...line, extra_ids: extraIds, precio_unitario: official, precio_negociado: official, precio_oficial: official, descuento: 0 }); }} /><span>{extra.nombre} · {money(extra.precioAdicional)}</span></label>)}</div></fieldset>
             <label className="text-sm">Cantidad ({line.unidad_venta})<input type="text" min={unitMin(line.unidad_venta)} step={unitStep(line.unidad_venta)} inputMode="decimal" value={line.cantidad} onChange={(event) => { const raw = event.target.value; const cantidad = parseSalesQuantity(raw, line.unidad_venta); setLine({ ...line, cantidad: raw, descuento: cantidad === null ? 0 : Number(((line.precio_oficial - Number(String(line.precio_negociado).replace(',', '.') || 0)) * cantidad).toFixed(2)) }); }} className={`${input} mt-1`} /></label>
             <label className="text-sm">Precio oficial<input type="text" readOnly value={money(line.precio_oficial)} className={`${input} mt-1 bg-gray-50 text-gray-500`} /></label>
             <label className="text-sm">Precio negociado<input inputMode="decimal" type="text" min="0" step="0.01" value={line.precio_negociado} onChange={(event) => { const raw = event.target.value; const parsed = parseSalesPrice(raw); setLine({ ...line, precio_unitario: parsed ?? 0, precio_negociado: raw, descuento: parsed === null ? 0 : Number(((line.precio_oficial - parsed) * (parseSalesQuantity(line.cantidad, line.unidad_venta) ?? 0)).toFixed(2)) }); }} className={`${input} mt-1`} /></label>
