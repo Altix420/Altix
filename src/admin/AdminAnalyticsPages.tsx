@@ -94,7 +94,7 @@ export const AdminReportsPage: React.FC<{ embedded?: boolean }> = () => {
   const exportInventory = async () => {
     setError(null);
     try {
-      const query = supabase.from("inventarios").select("stock,productos(nombre,sku,unidad_venta,disenos(nombre)),sucursales(nombre)");
+      const query = supabase.from("inventarios").select("stock,productos(nombre,sku,unidad_venta,disenos!productos_diseno_id_fkey(nombre)),sucursales(nombre)");
       const result = filters.branch ? await query.eq("sucursal_id", filters.branch) : await query;
       if (result.error) throw result.error;
       const rows = (result.data ?? []) as unknown as JsonRow[];

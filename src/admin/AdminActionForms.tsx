@@ -29,6 +29,7 @@ export type AdminAction =
   | "cash-close"
   | "cash-expense"
   | "cash-movement"
+  | "cash-deposit"
   | "expense-approve"
   | "expense-reject"
   | "credit-payment"
@@ -95,6 +96,7 @@ const labels: Record<AdminAction, string> = {
   "cash-close": "Cerrar caja",
   "cash-expense": "Registrar gasto",
   "cash-movement": "Movimiento autorizado",
+  "cash-deposit": "Registrar depósito",
   "expense-approve": "Aprobar gasto",
   "expense-reject": "Rechazar gasto",
   "credit-payment": "Registrar pago",
@@ -188,6 +190,8 @@ export const AdminActionButton: React.FC<{
             setOpenSessions((result.data ?? []) as Array<{ id: string; sucursal_id: string }>),
           );
     }
+    if (action === "expense-approve")
+      void supabase.from("sesiones_caja").select("id,sucursal_id").eq("estado", "abierta").order("fecha_apertura", { ascending: false }).then((result) => setOpenSessions((result.data ?? []) as Array<{ id: string; sucursal_id: string }>));
   }, [action, open, row.id, row.sucursal_id, row.ventas]);
   const close = () => {
     setOpen(false);
@@ -260,11 +264,19 @@ export const AdminActionButton: React.FC<{
           p_concepto: text("concepto"),
           p_autorizado_por: profile.id,
         });
+      if (action === "cash-deposit")
+        await adminService.registrarDeposito({
+          p_sesion_caja_id: String(row.id), p_monto: number("monto"),
+          p_comprobante_ref: text("comprobante_ref"), p_banco_destino: text("banco_destino"),
+          p_concepto: text("concepto"), p_registrado_por: profile.id,
+          p_operation_id: createOperationId("deposito-caja"),
+        });
       if (action === "expense-approve")
         await adminService.resolverGasto({
           p_gasto_id: String(row.id),
           p_aprobador_id: profile.id,
           p_aprobar: true,
+          p_sesion_caja_id: text("sesion_caja_id"),
         });
       if (action === "expense-reject")
         await adminService.resolverGasto({
@@ -563,6 +575,14 @@ export const AdminActionButton: React.FC<{
                 </Field>
               </>
             )}
+            {action === "cash-deposit" && (
+              <>
+                <Field label="Monto *"><input name="monto" required min="0.01" step="0.01" type="number" className={input} /></Field>
+                <Field label="Banco destino *"><input name="banco_destino" required className={input} /></Field>
+                <Field label="Referencia / comprobante"><input name="comprobante_ref" className={input} /></Field>
+                <Field label="Concepto *"><textarea name="concepto" required className={input} rows={2} /></Field>
+              </>
+            )}
             {["credit-payment", "order-advance"].includes(action) && (
               <>
                 <Field label="Monto *">
@@ -710,11 +730,7 @@ export const AdminActionButton: React.FC<{
               </p>
             )}
             {["expense-approve", "expense-reject"].includes(action) && (
-              <p className="text-sm text-gray-600">
-                {action === "expense-approve"
-                  ? "El gasto aprobado generará el egreso de caja."
-                  : "El gasto quedará rechazado y no se eliminará."}
-              </p>
+              action === "expense-approve" ? <><Field label="Caja de aplicación *"><select name="sesion_caja_id" required className={input}><option value="">Selecciona una sesión abierta</option>{openSessions.map((session) => <option key={session.id} value={session.id}>Sesión {session.id.slice(0, 8).toUpperCase()}</option>)}</select></Field><p className="text-sm text-gray-600">El gasto aprobado generará exactamente un egreso en la caja seleccionada.</p></> : <p className="text-sm text-gray-600">El gasto quedará rechazado y no se eliminará.</p>
             )}
             {action === "sale-return" && (
               <>

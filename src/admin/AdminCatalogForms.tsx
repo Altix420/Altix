@@ -6,7 +6,6 @@ import { friendlyAdminError } from "./admin.errors";
 import { adminService } from "./admin.service";
 import { compressImageForR2, getSignedR2Url, uploadFileToR2Service } from "../storage/r2.service";
 
-type Product = { id: string; sku: string; nombre: string; precio_base?: number; precio_mayorista?: number; costo_unitario?: number; unidad_venta?: string };
 type Category = { id: string; nombre: string };
 type Extra = { id: string; nombre: string; precio_adicional: number; activo: boolean | null };
 type Design = {
@@ -15,7 +14,10 @@ type Design = {
   nombre: string;
   descripcion: string | null;
   categoria_id: string | null;
-  producto_id: string | null;
+  unidad_venta: string;
+  precio_base: number;
+  precio_mayorista: number;
+  costo_unitario: number;
   archivo_url: string | null;
   archivo_id: string | null;
   precio: number;
@@ -91,7 +93,6 @@ const DesignImage: React.FC<{ path: string | null }> = ({ path }) => {
 
 export const AdminDesignsPage: React.FC = () => {
   const [items, setItems] = useState<Design[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [extras, setExtras] = useState<Extra[]>([]);
   const [search, setSearch] = useState("");
@@ -108,15 +109,13 @@ export const AdminDesignsPage: React.FC = () => {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [designs, productRows, costRows, categoryRows, extraRows, links] = await Promise.all([
+    const [designs, categoryRows, extraRows, links] = await Promise.all([
       supabase.from("disenos").select("*").order("created_at", { ascending: false }),
-      supabase.from("productos").select("id,sku,nombre,precio_base,precio_mayorista,unidad_venta").eq("activo", true).order("nombre"),
-      supabase.from("productos_costos").select("producto_id,costo_unitario"),
       supabase.from("categorias").select("id,nombre").order("nombre"),
       supabase.from("extras").select("*").order("nombre"),
       supabase.from("diseno_extras").select("diseno_id,extra_id"),
     ]);
-    const failed = [designs, productRows, costRows, categoryRows, extraRows, links].find(
+    const failed = [designs, categoryRows, extraRows, links].find(
       (result) => result.error,
     );
     if (failed?.error)
@@ -132,8 +131,6 @@ export const AdminDesignsPage: React.FC = () => {
           extra_ids: extraMap.get(item.id) ?? [],
         })) as Design[],
       );
-      const costs = new Map((costRows.data ?? []).map((item) => [item.producto_id, Number(item.costo_unitario)]));
-      setProducts((productRows.data ?? []).map((item) => ({ ...item, costo_unitario: costs.get(item.id) ?? 0 })) as Product[]);
       setCategories((categoryRows.data ?? []) as Category[]);
       setExtras((extraRows.data ?? []) as Extra[]);
     }
@@ -161,9 +158,8 @@ export const AdminDesignsPage: React.FC = () => {
     const precioBase = parseMoney("precio_base");
     const precioMayorista = parseMoney("precio_mayorista");
     const costoUnitario = parseMoney("costo_unitario");
-    const productoId = String(form.get("producto_id") || "");
-    if (!productoId || precioBase === null || precioMayorista === null || costoUnitario === null) {
-      setError("Completa producto, precio base, precio mayorista y costo con valores válidos.");
+    if (precioBase === null || precioMayorista === null || costoUnitario === null) {
+      setError("Completa precio base, precio mayorista y costo con valores válidos.");
       setSaving(false);
       return;
     }
@@ -179,7 +175,6 @@ export const AdminDesignsPage: React.FC = () => {
         p_nombre: nombre,
         p_descripcion: String(form.get("descripcion") || "") || undefined,
         p_categoria_id: String(form.get("categoria_id") || "") || undefined,
-        p_producto_id: productoId,
         p_archivo_url: uploaded.path || undefined,
         p_archivo_id: uploaded.archivoId,
         p_precio: precioBase,
@@ -213,7 +208,6 @@ export const AdminDesignsPage: React.FC = () => {
       ),
     [items, search],
   );
-  const editingProduct = products.find((product) => product.id === editing?.producto_id);
   return (
     <section className="space-y-5">
       <header className="flex flex-col gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
@@ -300,8 +294,7 @@ export const AdminDesignsPage: React.FC = () => {
                   </td>
                   <td className="px-4 py-3">
                     {(() => {
-                      const product = products.find((candidate) => candidate.id === item.producto_id);
-                      return product ? <><p className="font-medium">{product.sku} · {product.nombre}</p><p className="text-xs text-gray-500">Costo {money(product.costo_unitario)} · Venta {money(product.precio_base)}</p></> : <span className="text-gray-400">Sin SKU vinculado</span>;
+                      return <><p className="font-medium">{item.sku ?? "Sin SKU"} · {item.nombre}</p><p className="text-xs text-gray-500">Costo {money(item.costo_unitario)} · Venta {money(item.precio_base)} · {item.unidad_venta}</p></>;
                     })()}
                   </td>
                   <td className="px-4 py-3">{(() => { const extrasTotal = item.extra_ids.reduce((sum, extraId) => sum + Number(extras.find((extra) => extra.id === extraId)?.precio_adicional ?? 0), 0); return <><p>Base {money(item.precio)}</p><p className="text-xs text-gray-500">Final con extras {money(Number(item.precio) + extrasTotal)}</p></>; })()}</td>
@@ -369,23 +362,8 @@ export const AdminDesignsPage: React.FC = () => {
                   ))}
                 </select>
               </Field>
-              <Field label="Producto vendible / SKU *">
-                <select
-                  required
-                  name="producto_id"
-                  defaultValue={editing?.producto_id ?? ""}
-                  className={inputClass}
-                >
-                  <option value="">Selecciona el SKU vendible</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.sku} · {product.nombre}
-                    </option>
-                  ))}
-                </select>
-              </Field>
               <Field label="Unidad de venta *">
-                <select name="unidad_venta" required defaultValue={editingProduct?.unidad_venta ?? "unidad"} className={inputClass}>
+                <select name="unidad_venta" required defaultValue={editing?.unidad_venta ?? "unidad"} className={inputClass}>
                   <option value="unidad">Unidad</option>
                   <option value="vara">Vara</option>
                   <option value="metro">Metro</option>
@@ -396,13 +374,13 @@ export const AdminDesignsPage: React.FC = () => {
                 </select>
               </Field>
               <Field label="Precio base *">
-                <input name="precio_base" required type="number" min="0" step="0.01" defaultValue={editingProduct?.precio_base ?? 0} className={inputClass} />
+                <input name="precio_base" required type="number" min="0" step="0.01" defaultValue={editing?.precio_base ?? 0} className={inputClass} />
               </Field>
               <Field label="Precio mayorista *">
-                <input name="precio_mayorista" required type="number" min="0" step="0.01" defaultValue={editingProduct?.precio_mayorista ?? 0} className={inputClass} />
+                <input name="precio_mayorista" required type="number" min="0" step="0.01" defaultValue={editing?.precio_mayorista ?? 0} className={inputClass} />
               </Field>
               <Field label="Costo unitario *">
-                <input name="costo_unitario" required type="number" min="0" step="0.01" defaultValue={editingProduct?.costo_unitario ?? 0} className={inputClass} />
+                <input name="costo_unitario" required type="number" min="0" step="0.01" defaultValue={editing?.costo_unitario ?? 0} className={inputClass} />
               </Field>
               <Field label="Imagen">
                 <label className={`${buttonClass} w-full cursor-pointer justify-center`}>

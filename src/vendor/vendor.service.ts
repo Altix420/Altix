@@ -58,6 +58,7 @@ export const vendorService = {
     }),
   abrirCaja: (args: FunctionArgs<'abrir_caja'>) => supabase.rpc('abrir_caja', args).then(({ data, error }) => { if (error) throw new Error(error.message); return data as string; }),
   cerrarCaja: (args: FunctionArgs<'cerrar_caja'>) => supabase.rpc('cerrar_caja', args).then(({ data, error }) => { if (error) throw new Error(error.message); return data as Json; }),
+  registrarDeposito: (args: FunctionArgs<'registrar_deposito_efectivo'>) => supabase.rpc('registrar_deposito_efectivo', args).then(({ data, error }) => { if (error) throw new Error(error.message); return data as string; }),
   registrarAnticipo: (args: FunctionArgs<'registrar_anticipo_v1'>) => supabase.rpc('registrar_anticipo_v1', args).then(({ data, error }) => { if (error) throw new Error(error.message); return data as string; }),
   registrarGasto: (args: FunctionArgs<'registrar_gasto'>) => supabase.rpc('registrar_gasto', args).then(({ data, error }) => { if (error) throw new Error(error.message); return data as string; }),
   registrarPago: (args: FunctionArgs<'registrar_pago'>) => supabase.rpc('registrar_pago', args).then(({ data, error }) => { if (error) throw new Error(error.message); return data as string; }),

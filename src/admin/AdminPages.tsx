@@ -308,7 +308,7 @@ async function loadRows(resource: Resource, module?: string, dateRange?: { from:
       return rows(result.data).filter((row) => module !== "mayoristas" || row.es_mayorista === true);
     }
     case "productos": {
-      const result = await supabase.from("productos").select("*, archivos(path), disenos(archivo_url,archivo_id,archivos(path)), productos_costos(costo_unitario)").order("nombre");
+      const result = await supabase.from("productos").select("*, archivos(path), disenos!productos_diseno_id_fkey(archivo_url,archivo_id,archivos(path)), productos_costos(costo_unitario)").order("nombre");
       if (result.error) throw result.error;
       return rows(result.data).map((row) => ({
         ...row,
@@ -317,7 +317,7 @@ async function loadRows(resource: Resource, module?: string, dateRange?: { from:
     }
     case "inventarios": {
       const [productResult, branchResult, inventoryResult] = await Promise.all([
-        supabase.from("productos").select("id,nombre,sku,activo,precio_base,archivo_id,archivos(path),disenos(archivo_url,archivo_id,archivos(path)),categorias(nombre),productos_costos(costo_unitario)").eq("activo", true).order("nombre"),
+        supabase.from("productos").select("id,nombre,sku,activo,precio_base,archivo_id,archivos(path),disenos!productos_diseno_id_fkey(archivo_url,archivo_id,archivos(path)),categorias(nombre),productos_costos(costo_unitario)").eq("activo", true).order("nombre"),
         supabase.from("sucursales").select("id,nombre").eq("activa", true).order("nombre"),
         supabase.from("inventarios").select("sucursal_id,producto_id,stock,stock_minimo,stock_maximo"),
       ]);
@@ -582,7 +582,7 @@ const configs: Record<
       ["Diferencia", "diferencia"],
       ["Estado", "estado"],
     ],
-    rowActions: ["cash-close", "cash-expense", "cash-movement"],
+    rowActions: ["cash-close", "cash-expense", "cash-movement", "cash-deposit"],
     headerAction: "cash-open",
   },
   "caja-movimientos": {
@@ -592,6 +592,7 @@ const configs: Record<
     columns: [
       ["Fecha", "created_at"],
       ["Tipo", "tipo"],
+      ["Subtipo", "subtipo"],
       ["Monto", "monto"],
       ["Concepto", "concepto"],
       ["Sesión", "sesiones_caja"],
@@ -908,7 +909,7 @@ const AdminSaleDetail: React.FC<{ row: AdminRow; onClose: () => void }> = ({ row
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
-    void supabase.from("venta_items").select("id,cantidad,precio_unitario,subtotal,productos(nombre,sku,archivo_id,archivos(path),disenos(archivo_url,archivo_id,archivos(path))),venta_costos(costo_unitario)").eq("venta_id", String(row.id)).then((result) => {
+    void supabase.from("venta_items").select("id,cantidad,precio_unitario,subtotal,productos(nombre,sku,archivo_id,archivos(path),disenos!productos_diseno_id_fkey(archivo_url,archivo_id,archivos(path))),venta_costos(costo_unitario)").eq("venta_id", String(row.id)).then((result) => {
       if (!active) return;
       if (result.error) setError(friendlyAdminError(result.error, "No se pudo cargar el detalle de la venta."));
       else setItems(rows(result.data));
@@ -995,7 +996,7 @@ const AdminDataListPage: React.FC<{ module: string; embedded?: boolean }> = ({
     if (action === "order-finalize")
       return String(row.estado) === "entregado" && Number(row.saldo_pendiente ?? 0) === 0
         && !(Array.isArray(row.ventas) && row.ventas.length > 0);
-    if (action === "cash-movement") return row.estado === "abierta";
+    if (action === "cash-movement" || action === "cash-deposit") return row.estado === "abierta";
     if (action === "inventory-adjust-approve" || action === "inventory-adjust-reject")
       return row.estado === "pendiente";
     if (action === "sale-return") return Boolean(row.id);

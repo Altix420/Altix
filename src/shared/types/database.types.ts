@@ -936,14 +936,18 @@ export type Database = {
           archivo_url: string | null;
           categoria_id: string | null;
           cliente_id: string | null;
+          costo_unitario: number;
           created_at: string | null;
           descripcion: string | null;
           id: string;
           nombre: string;
           observaciones: string | null;
           precio: number;
+          precio_base: number;
+          precio_mayorista: number;
           producto_id: string | null;
           sku: string | null;
+          unidad_venta: string;
         };
         Insert: {
           activo?: boolean;
@@ -951,14 +955,18 @@ export type Database = {
           archivo_url?: string | null;
           categoria_id?: string | null;
           cliente_id?: string | null;
+          costo_unitario?: number;
           created_at?: string | null;
           descripcion?: string | null;
           id?: string;
           nombre: string;
           observaciones?: string | null;
           precio?: number;
+          precio_base?: number;
+          precio_mayorista?: number;
           producto_id?: string | null;
           sku?: string | null;
+          unidad_venta?: string;
         };
         Update: {
           activo?: boolean;
@@ -966,14 +974,18 @@ export type Database = {
           archivo_url?: string | null;
           categoria_id?: string | null;
           cliente_id?: string | null;
+          costo_unitario?: number;
           created_at?: string | null;
           descripcion?: string | null;
           id?: string;
           nombre?: string;
           observaciones?: string | null;
           precio?: number;
+          precio_base?: number;
+          precio_mayorista?: number;
           producto_id?: string | null;
           sku?: string | null;
+          unidad_venta?: string;
         };
         Relationships: [
           {
@@ -1465,36 +1477,55 @@ export type Database = {
       };
       movimientos_caja: {
         Row: {
+          banco_destino: string | null;
+          comprobante_ref: string | null;
           concepto: string;
           created_at: string | null;
           id: string;
           monto: number;
           operation_id: string | null;
           referencia_id: string | null;
+          registrado_por: string | null;
           sesion_caja_id: string | null;
+          subtipo: string;
           tipo: string;
         };
         Insert: {
+          banco_destino?: string | null;
+          comprobante_ref?: string | null;
           concepto: string;
           created_at?: string | null;
           id?: string;
           monto: number;
           operation_id?: string | null;
           referencia_id?: string | null;
+          registrado_por?: string | null;
           sesion_caja_id?: string | null;
+          subtipo?: string;
           tipo: string;
         };
         Update: {
+          banco_destino?: string | null;
+          comprobante_ref?: string | null;
           concepto?: string;
           created_at?: string | null;
           id?: string;
           monto?: number;
           operation_id?: string | null;
           referencia_id?: string | null;
+          registrado_por?: string | null;
           sesion_caja_id?: string | null;
+          subtipo?: string;
           tipo?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "movimientos_caja_registrado_por_fkey";
+            columns: ["registrado_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "movimientos_caja_sesion_caja_id_fkey";
             columns: ["sesion_caja_id"];
@@ -1897,6 +1928,7 @@ export type Database = {
           categoria_id: string | null;
           created_at: string | null;
           descripcion: string | null;
+          diseno_id: string | null;
           id: string;
           nombre: string;
           precio_base: number;
@@ -1910,6 +1942,7 @@ export type Database = {
           categoria_id?: string | null;
           created_at?: string | null;
           descripcion?: string | null;
+          diseno_id?: string | null;
           id?: string;
           nombre: string;
           precio_base?: number;
@@ -1923,6 +1956,7 @@ export type Database = {
           categoria_id?: string | null;
           created_at?: string | null;
           descripcion?: string | null;
+          diseno_id?: string | null;
           id?: string;
           nombre?: string;
           precio_base?: number;
@@ -1943,6 +1977,13 @@ export type Database = {
             columns: ["categoria_id"];
             isOneToOne: false;
             referencedRelation: "categorias";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "productos_diseno_id_fkey";
+            columns: ["diseno_id"];
+            isOneToOne: false;
+            referencedRelation: "disenos";
             referencedColumns: ["id"];
           },
         ];
@@ -2807,9 +2848,8 @@ export type Database = {
           p_precio?: number;
           p_precio_base?: number;
           p_precio_mayorista?: number;
-          p_producto_id?: string;
-          p_unidad_venta?: string;
           p_sku?: string;
+          p_unidad_venta?: string;
         };
         Returns: string;
       };
@@ -2835,6 +2875,7 @@ export type Database = {
           p_categoria_id?: string;
           p_costo_unitario?: number;
           p_descripcion?: string;
+          p_diseno_id?: string;
           p_nombre?: string;
           p_precio_base?: number;
           p_precio_mayorista?: number;
@@ -2955,6 +2996,18 @@ export type Database = {
         };
         Returns: string;
       };
+      registrar_deposito_efectivo: {
+        Args: {
+          p_banco_destino: string;
+          p_comprobante_ref: string;
+          p_concepto: string;
+          p_monto: number;
+          p_operation_id?: string;
+          p_registrado_por: string;
+          p_sesion_caja_id: string;
+        };
+        Returns: string;
+      };
       registrar_devolucion: {
         Args: {
           p_autorizado_por: string;
@@ -3042,7 +3095,12 @@ export type Database = {
         Returns: string;
       };
       resolver_gasto: {
-        Args: { p_aprobador_id: string; p_aprobar: boolean; p_gasto_id: string; p_sesion_caja_id?: string | null };
+        Args: {
+          p_aprobador_id: string;
+          p_aprobar: boolean;
+          p_gasto_id: string;
+          p_sesion_caja_id?: string;
+        };
         Returns: string;
       };
       revisar_vencimientos_credito: { Args: Record<PropertyKey, never>; Returns: undefined };

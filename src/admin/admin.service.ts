@@ -19,6 +19,8 @@ export const adminService = {
   registrarGasto: (args: FunctionArgs<"registrar_gasto">) => call("registrar_gasto", args),
   registrarMovimientoCaja: (args: FunctionArgs<"registrar_movimiento_caja">) =>
     call("registrar_movimiento_caja", args),
+  registrarDeposito: (args: FunctionArgs<"registrar_deposito_efectivo">) =>
+    call("registrar_deposito_efectivo", args),
   registrarPago: (args: FunctionArgs<"registrar_pago">) => call("registrar_pago", args),
   configurarCredito: (args: FunctionArgs<"configurar_credito_cliente">) =>
     call("configurar_credito_cliente", args),

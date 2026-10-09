@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
+  ArrowDownToLine,
   CheckCircle2,
   CircleAlert,
   Eye,
@@ -76,8 +77,8 @@ type CashSession = {
   usuario_id: string;
   monto_apertura: number;
   fecha_apertura: string;
-  profiles?: { nombre_completo?: string | null } | null;
 };
+type CashMovement = { id: string; tipo: string; subtipo: string | null; monto: number; concepto: string; created_at: string };
 
 const input = "altix-input w-full text-sm outline-none transition focus:border-blue-600";
 const money = (value: unknown) =>
@@ -378,6 +379,9 @@ export const VendorPosPage: React.FC = () => {
   const [cashSession, setCashSession] = useState<CashSession | null>(null);
   const [cashOpenAmount, setCashOpenAmount] = useState("0");
   const [cashCounts, setCashCounts] = useState({ q200: "0", q100: "0", q50: "0", q20: "0", q10: "0", q5: "0", monedas: "0" });
+  const [cashMovements, setCashMovements] = useState<CashMovement[]>([]);
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [depositBusy, setDepositBusy] = useState(false);
   const [cashBusy, setCashBusy] = useState(false);
   const [cashMessage, setCashMessage] = useState<string | null>(null);
   const [cashError, setCashError] = useState<string | null>(null);
@@ -395,24 +399,17 @@ export const VendorPosPage: React.FC = () => {
   const load = useCallback(async () => {
     if (!user || !sucursalActiva) return;
     setLoading(true);
-    const [productRows, inventoryRows, clientRows, sessions] = await Promise.all([
-      supabase.from("productos").select("*,archivos(path),disenos(archivo_url,archivo_id,archivos(path))").eq("activo", true).order("nombre"),
+    const [productRows, inventoryRows, clientRows] = await Promise.all([
+      supabase.from("productos").select("*,archivos(path),disenos!productos_diseno_id_fkey(archivo_url,archivo_id,archivos(path))").eq("activo", true).order("nombre"),
       supabase.from("inventarios").select("producto_id,stock").eq("sucursal_id", sucursalActiva.id),
       supabase.from("clientes").select("*").eq("activo", true).order("nombre"),
-      supabase
-        .from("sesiones_caja")
-        .select("id,usuario_id,monto_apertura,fecha_apertura,profiles!sesiones_caja_usuario_id_fkey(nombre_completo)")
-        .eq("sucursal_id", sucursalActiva.id)
-        .eq("estado", "abierta")
-        .order("fecha_apertura", { ascending: false })
-        .limit(1),
     ]);
-    const failed = [productRows, inventoryRows, clientRows, sessions].find(
+    const failed = [productRows, inventoryRows, clientRows].find(
       (result) => result.error,
     );
-    if (failed?.error)
+    if (failed?.error) {
       setError(friendlyAdminError(failed.error, "No se pudo cargar el punto de venta."));
-    else {
+    } else {
       const stockByProduct = new Map(
         (inventoryRows.data ?? []).map((row) => [row.producto_id, Number(row.stock)]),
       );
@@ -423,8 +420,24 @@ export const VendorPosPage: React.FC = () => {
         })),
       );
       setClients((clientRows.data ?? []) as Client[]);
-      setCashSession((sessions.data?.[0] ?? null) as CashSession | null);
       setError(null);
+    }
+
+    // La caja es un estado operativo independiente del catálogo. Un fallo de
+    // esta consulta no debe ocultar productos, inventario ni clientes.
+    const sessions = await supabase
+      .from("sesiones_caja")
+      .select("id,usuario_id,monto_apertura,fecha_apertura")
+      .eq("sucursal_id", sucursalActiva.id)
+      .eq("estado", "abierta")
+      .order("fecha_apertura", { ascending: false })
+      .limit(1);
+    if (sessions.error) {
+      setCashSession(null);
+      setCashError(friendlyAdminError(sessions.error, "No se pudo consultar la caja abierta."));
+    } else {
+      setCashSession((sessions.data?.[0] ?? null) as CashSession | null);
+      setCashError(null);
     }
     setLoading(false);
   }, [sucursalActiva, user]);
@@ -450,11 +463,39 @@ export const VendorPosPage: React.FC = () => {
     } catch (err) { setCashError(friendlyAdminError(err, "No se pudo cerrar la caja.")); }
     finally { setCashBusy(false); }
   };
+  const registerDeposit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!user || !cashSession) return;
+    setDepositBusy(true); setCashError(null); setCashMessage(null);
+    const form = new FormData(event.currentTarget);
+    try {
+      await vendorService.registrarDeposito({
+        p_sesion_caja_id: cashSession.id,
+        p_monto: Number(form.get("monto") ?? 0),
+        p_comprobante_ref: "",
+        p_banco_destino: "",
+        p_concepto: String(form.get("razon") ?? "").trim(),
+        p_registrado_por: user.id,
+        p_operation_id: createOperationId("deposito-caja"),
+      });
+      setDepositOpen(false); setCashMessage("Depósito registrado correctamente.");
+      await load();
+      const movements = await supabase.from("movimientos_caja").select("id,tipo,subtipo,monto,concepto,created_at").eq("sesion_caja_id", cashSession.id).order("created_at", { ascending: false }).limit(20);
+      if (!movements.error) setCashMovements((movements.data ?? []) as CashMovement[]);
+    } catch (err) { setCashError(friendlyAdminError(err, "No se pudo registrar el depósito.")); }
+    finally { setDepositBusy(false); }
+  };
   // Initial remote fetch synchronizes this view with Supabase.
   // eslint-disable-next-line react/set-state-in-effect
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    if (!cashSession) { setCashMovements([]); return; }
+    void supabase.from("movimientos_caja").select("id,tipo,subtipo,monto,concepto,created_at").eq("sesion_caja_id", cashSession.id).order("created_at", { ascending: false }).limit(20).then((result) => {
+      if (!result.error) setCashMovements((result.data ?? []) as CashMovement[]);
+    });
+  }, [cashSession]);
   useEffect(() => {
     const needle = clientSearch.trim().replace(/[%,()]/g, " ").replace(/\s+/g, " ");
     if (!needle) return;
@@ -638,12 +679,14 @@ export const VendorPosPage: React.FC = () => {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex items-center gap-2"><Wallet size={17} className="text-blue-700" /><h2 className="font-semibold">Caja de {sucursalActiva?.nombre ?? "tu sucursal"}</h2></div>
-            {cashSession ? <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm text-gray-600 sm:grid-cols-3"><div><dt className="text-xs text-gray-400">Estado</dt><dd className="font-medium text-green-700">Caja abierta</dd></div><div><dt className="text-xs text-gray-400">Apertura</dt><dd>{new Date(cashSession.fecha_apertura).toLocaleString("es-GT")}</dd></div><div><dt className="text-xs text-gray-400">Responsable</dt><dd>{cashSession.profiles?.nombre_completo ?? "Responsable asignado"}</dd></div></dl> : <p className="mt-2 text-sm text-amber-700">Caja cerrada. Abre la sesión antes de registrar ventas de contado.</p>}
+            {cashSession ? <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm text-gray-600 sm:grid-cols-3"><div><dt className="text-xs text-gray-400">Estado</dt><dd className="font-medium text-green-700">Caja abierta</dd></div><div><dt className="text-xs text-gray-400">Apertura</dt><dd>{new Date(cashSession.fecha_apertura).toLocaleString("es-GT")}</dd></div><div><dt className="text-xs text-gray-400">Responsable</dt><dd>{cashSession.usuario_id === user?.id ? "Tú" : "Responsable asignado"}</dd></div></dl> : <p className="mt-2 text-sm text-amber-700">Caja cerrada. Abre la sesión antes de registrar ventas de contado.</p>}
             {cashError && <p className="mt-3 border border-red-200 bg-red-50 p-2 text-sm text-red-700">{cashError}</p>}
             {cashMessage && <p className="mt-3 border border-green-200 bg-green-50 p-2 text-sm text-green-700">{cashMessage}</p>}
           </div>
-          {!cashSession ? <div className="flex items-end gap-2"><label className="text-xs text-gray-500">Saldo inicial<input type="number" min="0" step="0.01" value={cashOpenAmount} onChange={(event) => setCashOpenAmount(event.target.value)} className={`${input} mt-1 w-32`} /></label><button type="button" onClick={() => void openCash()} disabled={cashBusy || Number(cashOpenAmount) < 0} className="inline-flex items-center gap-2 bg-gray-900 px-3 py-2.5 text-sm font-medium text-white disabled:opacity-50">Abrir caja</button></div> : cashSession.usuario_id === user?.id ? <div className="w-full max-w-xl"><p className="text-xs text-gray-500">Cierre por denominaciones</p><div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">{Object.keys(cashCounts).map((key) => <label key={key} className="text-[10px] text-gray-500">{key === "monedas" ? "Monedas" : key.toUpperCase()}<input type="number" min="0" step="1" value={cashCounts[key as keyof typeof cashCounts]} onChange={(event) => setCashCounts({ ...cashCounts, [key]: event.target.value })} className={`${input} mt-1 px-2`} /></label>)}</div><button type="button" onClick={() => void closeCash()} disabled={cashBusy} className="mt-3 border border-gray-300 px-3 py-2 text-sm font-medium disabled:opacity-50">Cerrar caja</button></div> : <p className="text-sm text-gray-500">El cierre corresponde al responsable de apertura o a un administrador.</p>}
+          {!cashSession ? <div className="flex items-end gap-2"><label className="text-xs text-gray-500">Saldo inicial<input type="number" min="0" step="0.01" value={cashOpenAmount} onChange={(event) => setCashOpenAmount(event.target.value)} className={`${input} mt-1 w-32`} /></label><button type="button" onClick={() => void openCash()} disabled={cashBusy || Number(cashOpenAmount) < 0} className="inline-flex items-center gap-2 bg-gray-900 px-3 py-2.5 text-sm font-medium text-white disabled:opacity-50">Abrir caja</button></div> : cashSession.usuario_id === user?.id ? <div className="w-full max-w-xl"><div className="flex flex-wrap gap-2"><button type="button" onClick={() => setDepositOpen(true)} disabled={cashBusy || depositBusy} className="inline-flex items-center gap-2 bg-blue-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"><ArrowDownToLine size={16} /> Depósito</button><button type="button" onClick={() => void closeCash()} disabled={cashBusy || depositBusy} className="border border-gray-300 px-3 py-2 text-sm font-medium disabled:opacity-50">Cerrar caja</button></div><p className="mt-3 text-xs text-gray-500">Cierre por denominaciones</p><div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">{Object.keys(cashCounts).map((key) => <label key={key} className="text-[10px] text-gray-500">{key === "monedas" ? "Monedas" : key.toUpperCase()}<input type="number" min="0" step="1" value={cashCounts[key as keyof typeof cashCounts]} onChange={(event) => setCashCounts({ ...cashCounts, [key]: event.target.value })} className={`${input} mt-1 px-2`} /></label>)}</div></div> : <p className="text-sm text-gray-500">El cierre corresponde al responsable de apertura o a un administrador.</p>}
         </div>
+        {cashMovements.length > 0 && <div className="mt-4 border-t border-gray-100 pt-4"><p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Movimientos recientes</p><div className="mt-2 divide-y divide-gray-100">{cashMovements.map((movement) => <div key={movement.id} className="flex items-center justify-between gap-3 py-2 text-sm"><div><p className="font-medium">{movement.subtipo === "deposito" ? "Depósito" : movement.tipo === "ingreso" ? "Ingreso" : "Egreso"}</p><p className="text-xs text-gray-500">{movement.concepto}</p></div><span className={movement.tipo === "ingreso" ? "text-green-700" : "text-gray-700"}>{movement.tipo === "ingreso" ? "+" : "-"}{money(Number(movement.monto))}</span></div>)}</div></div>}
+        {depositOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/30 p-4"><div className="w-full max-w-md border border-gray-200 bg-white p-5 shadow-xl"><div className="flex items-center justify-between"><h2 className="font-semibold">Depósito de caja</h2><button type="button" title="Cerrar" onClick={() => { if (!depositBusy) setDepositOpen(false); }} className="p-1 text-gray-500"><X size={17} /></button></div><form onSubmit={registerDeposit} className="mt-4 space-y-3"><label className="block text-sm">Monto *<input name="monto" required min="0.01" step="0.01" inputMode="decimal" type="number" className={`${input} mt-1`} /></label><label className="block text-sm">Razón *<textarea name="razon" required rows={3} className={`${input} mt-1`} /></label><div className="flex justify-end gap-2"><button type="button" disabled={depositBusy} onClick={() => setDepositOpen(false)} className="border border-gray-300 px-3 py-2 text-sm">Cancelar</button><button type="submit" disabled={depositBusy} className="bg-blue-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">{depositBusy ? "Registrando..." : "Registrar depósito"}</button></div></form></div></div>}
       </section>
       {loading ? (
         <State>Cargando catálogo y clientes...</State>
@@ -1009,7 +1052,7 @@ const SaleDetail: React.FC<{ row: Row; onClose: () => void }> = ({ row, onClose 
     let active = true;
     void supabase
       .from("venta_items")
-      .select("cantidad,precio_unitario,subtotal,productos(nombre,sku,disenos(id,archivo_url))")
+      .select("cantidad,precio_unitario,subtotal,productos(nombre,sku,disenos!productos_diseno_id_fkey(id,archivo_url))")
       .eq("venta_id", String(row.id))
       .then((result) => {
         if (!active) return;
@@ -1211,7 +1254,7 @@ const loadResource = async (module: string, userId: string, branchId?: string) =
   if (module === "catalogo")
   {
     const [productResult, designResult] = await Promise.all([
-      supabase.from("productos").select("*,archivos(path),disenos(archivo_url,archivo_id,archivos(path))").eq("activo", true).order("nombre"),
+      supabase.from("productos").select("*,archivos(path),disenos!productos_diseno_id_fkey(archivo_url,archivo_id,archivos(path))").eq("activo", true).order("nombre"),
       supabase.from("disenos").select("id,sku,nombre,precio,activo,archivo_url,archivo_id,archivos(path)").eq("activo", true).order("nombre"),
     ]);
     const failed = [productResult, designResult].find((result) => result.error);
@@ -1247,7 +1290,7 @@ const loadResource = async (module: string, userId: string, branchId?: string) =
   {
     if (!branchId) return { data: [], error: null };
     const [productResult, inventoryResult, branchResult] = await Promise.all([
-      supabase.from("productos").select("id,nombre,sku,activo,archivo_id,archivos(path),disenos(id,archivo_url,archivo_id,archivos(path))").eq("activo", true).order("nombre"),
+      supabase.from("productos").select("id,nombre,sku,activo,archivo_id,archivos(path),disenos!productos_diseno_id_fkey(id,archivo_url,archivo_id,archivos(path))").eq("activo", true).order("nombre"),
       supabase.from("inventarios").select("producto_id,stock,stock_minimo,stock_maximo").eq("sucursal_id", branchId),
       supabase.from("sucursales").select("id,nombre").eq("id", branchId).maybeSingle(),
     ]);

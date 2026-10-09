@@ -11,8 +11,8 @@ import { ProductImage, type ProductImageSource } from "../shared/product-images"
 import { extraPrice, normalizeExtra, type ExtraRecord } from "../shared/extras";
 
 type Client = { id: string; nombre: string; nit_dpi: string | null; es_mayorista: boolean | null };
-type Product = { id: string; sku: string; nombre: string; precio_base: number; precio_mayorista: number; unidad_venta: SalesUnit; archivo_id: string | null; archivos?: { path?: string | null } | null; disenos?: Array<{ archivo_url?: string | null; archivos?: { path?: string | null } | null }> | null };
-type Design = { id: string; nombre: string; precio: number; producto_id: string | null; archivo_url?: string | null; archivos?: { path?: string | null } | null };
+type Product = { id: string; sku: string; nombre: string; precio_base: number; precio_mayorista: number; unidad_venta: SalesUnit; archivo_id: string | null; archivos?: { path?: string | null } | null };
+type Design = { id: string; nombre: string; precio: number; precio_base: number; precio_mayorista: number; unidad_venta: SalesUnit; archivo_url?: string | null; archivo_id?: string | null; archivos?: { path?: string | null } | null };
 type QuoteLine = {
   producto_id: string;
   diseno_id: string;
@@ -53,8 +53,8 @@ export const VendorQuotationPage: React.FC = () => {
     let active = true;
     void Promise.all([
       supabase.from("clientes").select("id,nombre,nit_dpi,es_mayorista").eq("activo", true).order("nombre"),
-      supabase.from("productos").select("id,sku,nombre,precio_base,precio_mayorista,unidad_venta,archivo_id,archivos(path),disenos(archivo_url,archivo_id,archivos(path))").eq("activo", true).order("nombre"),
-      supabase.from("disenos").select("id,nombre,precio,producto_id,archivo_url,archivo_id,archivos(path)").eq("activo", true).order("nombre"),
+      supabase.from("productos").select("id,sku,nombre,precio_base,precio_mayorista,unidad_venta,archivo_id,archivos(path)").eq("activo", true).order("nombre"),
+      supabase.from("disenos").select("id,nombre,precio,precio_base,precio_mayorista,unidad_venta,archivo_url,archivo_id,archivos(path)").eq("activo", true).order("nombre"),
       supabase.from("extras").select("id,nombre,precio_adicional,activo").eq("activo", true).order("nombre"),
     ]).then(([clientRows, productRows, designRows, extraRows]) => {
       if (!active) return;
@@ -80,20 +80,19 @@ export const VendorQuotationPage: React.FC = () => {
     const product = products.find((item) => item.id === productId);
     const design = designs.find((item) => item.id === designId);
     const productPrice = product ? (client?.es_mayorista ? product.precio_mayorista : product.precio_base) : 0;
-    const basePrice = design ? design.precio : productPrice;
+    const basePrice = design ? (client?.es_mayorista ? design.precio_mayorista : design.precio_base) : productPrice;
     const extraTotal = extraIds.reduce((sum, extraId) => sum + (extraPrice(extras, extraId) ?? 0), 0);
     return Number((basePrice + extraTotal).toFixed(2));
   };
   const chooseProduct = (productId: string) => {
-    const official = getOfficialPrice(productId, line.diseno_id, line.extra_ids);
-    setLine((current) => ({ ...current, producto_id: productId, unidad_venta: products.find((product) => product.id === productId)?.unidad_venta ?? "unidad", precio_unitario: official, precio_negociado: official, precio_oficial: official, descuento: 0 }));
+    const official = getOfficialPrice(productId, "", line.extra_ids);
+    setLine((current) => ({ ...current, producto_id: productId, diseno_id: "", unidad_venta: products.find((product) => product.id === productId)?.unidad_venta ?? "unidad", precio_unitario: official, precio_negociado: official, precio_oficial: official, descuento: 0 }));
   };
   const chooseDesign = (designId: string) => {
     const design = designs.find((item) => item.id === designId);
-    const productId = design?.producto_id ?? line.producto_id;
-    const unit = products.find((product) => product.id === productId)?.unidad_venta ?? "unidad";
-    const official = getOfficialPrice(productId, designId, line.extra_ids);
-    setLine((current) => ({ ...current, producto_id: productId, diseno_id: designId, unidad_venta: unit, precio_unitario: official, precio_negociado: String(official), precio_oficial: official, descuento: 0 }));
+    const unit = design?.unidad_venta ?? "unidad";
+    const official = getOfficialPrice("", designId, line.extra_ids);
+    setLine((current) => ({ ...current, producto_id: "", diseno_id: designId, unidad_venta: unit, precio_unitario: official, precio_negociado: String(official), precio_oficial: official, descuento: 0 }));
   };
   const chooseClient = (nextClientId: string) => {
     const nextClient = clients.find((client) => client.id === nextClientId);
