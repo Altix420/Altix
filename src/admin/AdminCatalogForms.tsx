@@ -6,7 +6,7 @@ import { friendlyAdminError } from "./admin.errors";
 import { adminService } from "./admin.service";
 import { compressImageForR2, getSignedR2Url, uploadFileToR2Service } from "../storage/r2.service";
 
-type Product = { id: string; sku: string; nombre: string; precio_base?: number; precio_mayorista?: number; costo_unitario?: number };
+type Product = { id: string; sku: string; nombre: string; precio_base?: number; precio_mayorista?: number; costo_unitario?: number; unidad_venta?: string };
 type Category = { id: string; nombre: string };
 type Extra = { id: string; nombre: string; precio_adicional: number; activo: boolean | null };
 type Design = {
@@ -110,7 +110,7 @@ export const AdminDesignsPage: React.FC = () => {
     setError(null);
     const [designs, productRows, costRows, categoryRows, extraRows, links] = await Promise.all([
       supabase.from("disenos").select("*").order("created_at", { ascending: false }),
-      supabase.from("productos").select("id,sku,nombre,precio_base,precio_mayorista").eq("activo", true).order("nombre"),
+      supabase.from("productos").select("id,sku,nombre,precio_base,precio_mayorista,unidad_venta").eq("activo", true).order("nombre"),
       supabase.from("productos_costos").select("producto_id,costo_unitario"),
       supabase.from("categorias").select("id,nombre").order("nombre"),
       supabase.from("extras").select("*").order("nombre"),
@@ -186,6 +186,7 @@ export const AdminDesignsPage: React.FC = () => {
         p_precio_base: precioBase,
         p_precio_mayorista: precioMayorista,
         p_costo_unitario: costoUnitario,
+        p_unidad_venta: String(form.get("unidad_venta") || "unidad"),
         p_activo: form.get("activo") === "on",
         p_observaciones: String(form.get("observaciones") || "") || undefined,
         p_extra_ids: extraIds,
@@ -381,6 +382,17 @@ export const AdminDesignsPage: React.FC = () => {
                       {product.sku} · {product.nombre}
                     </option>
                   ))}
+                </select>
+              </Field>
+              <Field label="Unidad de venta *">
+                <select name="unidad_venta" required defaultValue={editingProduct?.unidad_venta ?? "unidad"} className={inputClass}>
+                  <option value="unidad">Unidad</option>
+                  <option value="vara">Vara</option>
+                  <option value="metro">Metro</option>
+                  <option value="yarda">Yarda</option>
+                  <option value="docena">Docena</option>
+                  <option value="paquete">Paquete</option>
+                  <option value="rollo">Rollo</option>
                 </select>
               </Field>
               <Field label="Precio base *">

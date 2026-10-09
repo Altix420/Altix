@@ -2808,6 +2808,7 @@ export type Database = {
           p_precio_base?: number;
           p_precio_mayorista?: number;
           p_producto_id?: string;
+          p_unidad_venta?: string;
           p_sku?: string;
         };
         Returns: string;
@@ -3041,7 +3042,7 @@ export type Database = {
         Returns: string;
       };
       resolver_gasto: {
-        Args: { p_aprobador_id: string; p_aprobar: boolean; p_gasto_id: string };
+        Args: { p_aprobador_id: string; p_aprobar: boolean; p_gasto_id: string; p_sesion_caja_id?: string | null };
         Returns: string;
       };
       revisar_vencimientos_credito: { Args: Record<PropertyKey, never>; Returns: undefined };
