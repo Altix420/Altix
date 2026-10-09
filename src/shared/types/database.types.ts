@@ -2798,12 +2798,15 @@ export type Database = {
           p_archivo_url?: string;
           p_categoria_id?: string;
           p_cliente_id?: string;
+          p_costo_unitario?: number;
           p_descripcion?: string;
           p_diseno_id?: string;
           p_extra_ids?: Json;
           p_nombre?: string;
           p_observaciones?: string;
           p_precio?: number;
+          p_precio_base?: number;
+          p_precio_mayorista?: number;
           p_producto_id?: string;
           p_sku?: string;
         };

@@ -154,6 +154,20 @@ export const AdminDesignsPage: React.FC = () => {
       setSaving(false);
       return;
     }
+    const parseMoney = (name: string) => {
+      const value = Number(String(form.get(name) ?? "").replace(",", "."));
+      return Number.isFinite(value) && value >= 0 ? value : null;
+    };
+    const precio = parseMoney("precio");
+    const precioBase = parseMoney("precio_base");
+    const precioMayorista = parseMoney("precio_mayorista");
+    const costoUnitario = parseMoney("costo_unitario");
+    const productoId = String(form.get("producto_id") || "");
+    if (!productoId || precio === null || precioBase === null || precioMayorista === null || costoUnitario === null) {
+      setError("Completa producto, precio del diseño, precio base, precio mayorista y costo con valores válidos.");
+      setSaving(false);
+      return;
+    }
     try {
       let uploaded = editing?.archivo_id
         ? { archivoId: editing.archivo_id, path: editing.archivo_url }
@@ -166,10 +180,13 @@ export const AdminDesignsPage: React.FC = () => {
         p_nombre: nombre,
         p_descripcion: String(form.get("descripcion") || "") || undefined,
         p_categoria_id: String(form.get("categoria_id") || "") || undefined,
-        p_producto_id: String(form.get("producto_id") || "") || undefined,
+        p_producto_id: productoId,
         p_archivo_url: uploaded.path || undefined,
         p_archivo_id: uploaded.archivoId,
-        p_precio: Number(form.get("precio") ?? 0),
+        p_precio: precio,
+        p_precio_base: precioBase,
+        p_precio_mayorista: precioMayorista,
+        p_costo_unitario: costoUnitario,
         p_activo: form.get("activo") === "on",
         p_observaciones: String(form.get("observaciones") || "") || undefined,
         p_extra_ids: extraIds,
@@ -196,6 +213,7 @@ export const AdminDesignsPage: React.FC = () => {
       ),
     [items, search],
   );
+  const editingProduct = products.find((product) => product.id === editing?.producto_id);
   return (
     <section className="space-y-5">
       <header className="flex flex-col gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
@@ -375,6 +393,15 @@ export const AdminDesignsPage: React.FC = () => {
                   defaultValue={editing?.precio ?? 0}
                   className={inputClass}
                 />
+              </Field>
+              <Field label="Precio base *">
+                <input name="precio_base" required type="number" min="0" step="0.01" defaultValue={editingProduct?.precio_base ?? 0} className={inputClass} />
+              </Field>
+              <Field label="Precio mayorista *">
+                <input name="precio_mayorista" required type="number" min="0" step="0.01" defaultValue={editingProduct?.precio_mayorista ?? 0} className={inputClass} />
+              </Field>
+              <Field label="Costo unitario *">
+                <input name="costo_unitario" required type="number" min="0" step="0.01" defaultValue={editingProduct?.costo_unitario ?? 0} className={inputClass} />
               </Field>
               <Field label="Imagen">
                 <label className={`${buttonClass} w-full cursor-pointer justify-center`}>

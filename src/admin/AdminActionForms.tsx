@@ -124,6 +124,7 @@ export const AdminActionButton: React.FC<{
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [centralBranch, setCentralBranch] = useState<Branch | null>(null);
   const [openSessions, setOpenSessions] = useState<Array<{ id: string; sucursal_id: string }>>([]);
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [returnedByProduct, setReturnedByProduct] = useState<Record<string, number>>({});
@@ -141,6 +142,9 @@ export const AdminActionButton: React.FC<{
         .eq("activa", true)
         .order("nombre")
         .then((result) => setBranches((result.data ?? []) as Branch[]));
+    if (action === "cash-expense")
+      void supabase.from("sucursales").select("id,nombre").eq("activa", true).eq("nombre", "FFERSSI Central").maybeSingle()
+        .then((result) => setCentralBranch((result.data as Branch | null) ?? null));
     if (action === "cash-expense" && !row.id)
       void supabase
         .from("sesiones_caja")
@@ -247,6 +251,7 @@ export const AdminActionButton: React.FC<{
         await (async () => {
           const sessionId = text("sesion_caja_id") || String(row.id ?? "");
           const sourceBranch = openSessions.find((session) => session.id === sessionId)?.sucursal_id || String(row.sucursal_id ?? sucursalActiva?.id ?? "");
+          if (!row.id && (!centralBranch || sourceBranch !== centralBranch.id)) throw new Error("FFERSSI Central no tiene una caja abierta disponible para registrar el gasto.");
           if (!sessionId || !sourceBranch) throw new Error("Selecciona una caja abierta de origen.");
           return adminService.registrarGasto({
             p_sesion_caja_id: sessionId,
@@ -523,8 +528,8 @@ export const AdminActionButton: React.FC<{
             )}
             {action === "cash-expense" && (
               <>
-                {!row.id && <Field label="Caja de origen *"><select name="sesion_caja_id" required className={input}><option value="">Selecciona una caja abierta</option>{openSessions.map((session) => <option key={session.id} value={session.id}>{branches.find((branch) => branch.id === session.sucursal_id)?.nombre ?? "Sucursal"} · sesión abierta</option>)}</select></Field>}
-                {profile?.role === "administrador" && <Field label="Sucursal imputada *"><select name="sucursal_imputada_id" required defaultValue={String(row.sucursal_imputada_id ?? row.sucursal_id ?? "")} className={input}><option value="">Selecciona una sucursal</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.nombre}</option>)}</select></Field>}
+                {!row.id && <Field label="Origen del gasto *"><select name="sesion_caja_id" required className={input}><option value="">{centralBranch ? "Selecciona la caja abierta de FFERSSI Central" : "FFERSSI Central no está configurada"}</option>{openSessions.filter((session) => session.sucursal_id === centralBranch?.id).map((session) => <option key={session.id} value={session.id}>FFERSSI Central · sesión abierta</option>)}</select></Field>}
+                {profile?.role === "administrador" && <Field label="Sucursal imputada *"><select name="sucursal_imputada_id" required defaultValue={String(row.sucursal_imputada_id ?? row.sucursal_id ?? "")} className={input}><option value="">Selecciona una sucursal comercial</option>{branches.filter((branch) => branch.id !== centralBranch?.id && !/central/i.test(branch.nombre)).map((branch) => <option key={branch.id} value={branch.id}>{branch.nombre}</option>)}</select></Field>}
                 <Field label="Categoría *">
                   <input name="categoria" required className={input} />
                 </Field>

@@ -4,7 +4,24 @@ export type SalesUnit = (typeof SALES_UNITS)[number];
 
 export const unitAllowsFraction = (unit: string | null | undefined) => unit === 'vara' || unit === 'metro' || unit === 'yarda';
 export const unitStep = (unit: string | null | undefined) => unit === 'vara' ? '0.25' : unitAllowsFraction(unit) ? '0.001' : '1';
+export const unitMin = (unit: string | null | undefined) => unit === 'vara' ? '0.25' : unitAllowsFraction(unit) ? '0.001' : '1';
 export const isValidUnitQuantity = (quantity: number, unit: string | null | undefined) => quantity > 0 && (unit === 'vara' ? Number.isInteger(quantity * 4) : unitAllowsFraction(unit) ? Number.isFinite(quantity) : Number.isInteger(quantity));
+
+export const parseSalesQuantity = (value: string | number, unit: string | null | undefined): number | null => {
+  const normalized = String(value).trim().replace(',', '.');
+  if (!normalized) return null;
+  const quantity = Number(normalized);
+  if (!Number.isFinite(quantity) || !isValidUnitQuantity(quantity, unit)) return null;
+  if (unit === 'vara' && Math.abs(quantity * 4 - Math.round(quantity * 4)) > 1e-9) return null;
+  return Number(quantity.toFixed(3));
+};
+
+export const parseSalesPrice = (value: string | number): number | null => {
+  const normalized = String(value).trim().replace(',', '.');
+  if (!normalized) return null;
+  const price = Number(normalized);
+  return Number.isFinite(price) && price >= 0 ? Number(price.toFixed(2)) : null;
+};
 
 const labels: Record<SalesUnit, { singular: string; plural: string }> = {
   vara: { singular: 'vara', plural: 'varas' },
