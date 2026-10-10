@@ -830,7 +830,19 @@ const AdminApprovalsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false
         if (approve) await adminService.aprobarAjuste({ p_ajuste_id: String(item.referencia_id), p_aprobado_por: profile.id });
         else await adminService.rechazarAjuste({ p_ajuste_id: String(item.referencia_id), p_rechazado_por: profile.id });
       } else if (item.tipo === "gasto") {
-        await adminService.resolverGasto({ p_gasto_id: String(item.referencia_id), p_aprobador_id: profile.id, p_aprobar: approve });
+        let sessionId: string | undefined;
+        if (approve) {
+          const sessions = await supabase
+            .from("sesiones_caja")
+            .select("id")
+            .eq("sucursal_id", String(item.sucursal_id ?? ""))
+            .eq("estado", "abierta")
+            .limit(1);
+          if (sessions.error) throw sessions.error;
+          sessionId = String(sessions.data?.[0]?.id ?? "");
+          if (!sessionId) throw new Error(`No existe una caja abierta en ${branches[String(item.sucursal_id)] ?? "la sucursal imputada"}.`);
+        }
+        await adminService.resolverGasto({ p_gasto_id: String(item.referencia_id), p_aprobador_id: profile.id, p_aprobar: approve, ...(sessionId ? { p_sesion_caja_id: sessionId } : {}) });
       } else {
         await adminService.resolverAprobacion({ p_aprobacion_id: String(item.id), p_revisado_por: profile.id, p_aprobar: approve });
       }
