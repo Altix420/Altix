@@ -74,8 +74,31 @@ Q39,500.
 
 ## Estado PROD
 
-La corrección está lista para publicar. Falta validar en PROD, con sesión
-autenticada, la secuencia no destructiva:
+La corrección de aprobación ya está publicada y PROD confirma el efecto
+correcto para el gasto `Tijera`: estado aprobado, un único movimiento de
+egreso por Q50 y asociación con la sesión de `sucursal prueba2`.
+
+El cierre sigue bloqueado por una causa de negocio explícita, no por una
+firma RPC ni por permisos: el gasto `Almuerzo personal` continúa pendiente
+por Q400 en esa misma sesión. La función 044 rechaza el cierre mientras exista
+cualquier gasto pendiente para evitar cerrar una caja sin resolver.
+
+La sesión PROD tiene esta resolución:
+
+- RPC efectiva: `cerrar_caja(uuid, jsonb)`.
+- Overloads: ninguno.
+- Sesión: `e163d166-d4fc-469d-84ac-df924f9b5ba2`, sucursal `sucursal prueba2`.
+- Propietario: `Vendedor 1`; Admin está autorizado por rol.
+- Efectivo esperado RPC: Q20,450.
+- Gasto aprobado asociado: Q50, un egreso.
+- Gasto pendiente que bloquea: Q400.
+- El cálculo de apertura + ingresos - egresos coincide con el ledger.
+
+La UI ya traduce este error a: `No se puede cerrar la caja mientras exista un
+gasto pendiente de aprobación.` No se requiere migración 045.
+
+Falta validar en PROD, con sesión autenticada, la secuencia no destructiva
+después de resolver el gasto pendiente:
 
 1. Admin aprueba un gasto pendiente seleccionando automáticamente la caja
    abierta de su sucursal imputada.
