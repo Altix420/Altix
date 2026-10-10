@@ -5,7 +5,10 @@ import { getSignedR2Url } from "../storage/r2.service";
 type ImageRecord = { path?: string | null; archivo_url?: string | null };
 export type ProductImageSource = ImageRecord & {
   archivos?: ImageRecord | ImageRecord[] | null;
-  disenos?: Array<ImageRecord & { archivos?: ImageRecord | ImageRecord[] | null }> | null;
+  disenos?:
+    | (ImageRecord & { archivos?: ImageRecord | ImageRecord[] | null })
+    | Array<ImageRecord & { archivos?: ImageRecord | ImageRecord[] | null }>
+    | null;
 };
 
 const pathFromRecord = (record?: ImageRecord | null) => {
@@ -18,8 +21,13 @@ const pathFromFiles = (files?: ImageRecord | ImageRecord[] | null) =>
 
 const resolveProductImagePath = (product?: ProductImageSource | null) => {
   if (!product) return null;
+  const designs = product.disenos
+    ? Array.isArray(product.disenos)
+      ? product.disenos
+      : [product.disenos]
+    : [];
   return pathFromRecord(product) || pathFromFiles(product.archivos) ||
-    product.disenos?.map((design) => pathFromRecord(design) || pathFromFiles(design.archivos)).find(Boolean) || null;
+    designs.map((design) => pathFromRecord(design) || pathFromFiles(design.archivos)).find(Boolean) || null;
 };
 
 export const ProductImage: React.FC<{

@@ -127,7 +127,7 @@ export const AdminActionButton: React.FC<{
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [openSessions, setOpenSessions] = useState<Array<{ id: string; sucursal_id: string }>>([]);
+  const [openSessions, setOpenSessions] = useState<Array<{ id: string; sucursal_id: string; sucursales?: { nombre?: string | null } | null }>>([]);
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [returnedByProduct, setReturnedByProduct] = useState<Record<string, number>>({});
   const [countProducts, setCountProducts] = useState<CountProduct[]>([]);
@@ -190,8 +190,17 @@ export const AdminActionButton: React.FC<{
             setOpenSessions((result.data ?? []) as Array<{ id: string; sucursal_id: string }>),
           );
     }
-    if (action === "expense-approve")
-      void supabase.from("sesiones_caja").select("id,sucursal_id").eq("estado", "abierta").order("fecha_apertura", { ascending: false }).then((result) => setOpenSessions((result.data ?? []) as Array<{ id: string; sucursal_id: string }>));
+    if (action === "expense-approve") {
+      const branchId = String(row.sucursal_imputada_id ?? "");
+      if (branchId)
+        void supabase
+          .from("sesiones_caja")
+          .select("id,sucursal_id,sucursales(nombre)")
+          .eq("sucursal_id", branchId)
+          .eq("estado", "abierta")
+          .order("fecha_apertura", { ascending: false })
+          .then((result) => setOpenSessions((result.data ?? []) as Array<{ id: string; sucursal_id: string; sucursales?: { nombre?: string | null } | null }>));
+    }
   }, [action, open, row.id, row.sucursal_id, row.ventas]);
   const close = () => {
     setOpen(false);
@@ -502,12 +511,12 @@ export const AdminActionButton: React.FC<{
             {action === "cash-close" && (
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  ["q200", "Billetes Q200"],
-                  ["q100", "Billetes Q100"],
-                  ["q50", "Billetes Q50"],
-                  ["q20", "Billetes Q20"],
-                  ["q10", "Billetes Q10"],
-                  ["q5", "Billetes Q5"],
+                  ["q200", "Cantidad de billetes Q200"],
+                  ["q100", "Cantidad de billetes Q100"],
+                  ["q50", "Cantidad de billetes Q50"],
+                  ["q20", "Cantidad de billetes Q20"],
+                  ["q10", "Cantidad de billetes Q10"],
+                  ["q5", "Cantidad de billetes Q5"],
                   ["monedas", "Monedas (monto total Q)"],
                 ].map(([name, label]) => (
                   <Field key={name} label={label}>
@@ -515,7 +524,7 @@ export const AdminActionButton: React.FC<{
                       name={name}
                       required
                       min="0"
-                      step="0.01"
+                      step={name === "monedas" ? "0.01" : "1"}
                       type="number"
                       defaultValue="0"
                       className={input}
@@ -730,7 +739,7 @@ export const AdminActionButton: React.FC<{
               </p>
             )}
             {["expense-approve", "expense-reject"].includes(action) && (
-              action === "expense-approve" ? <><Field label="Caja de aplicación *"><select name="sesion_caja_id" required className={input}><option value="">Selecciona una sesión abierta</option>{openSessions.map((session) => <option key={session.id} value={session.id}>Sesión {session.id.slice(0, 8).toUpperCase()}</option>)}</select></Field><p className="text-sm text-gray-600">El gasto aprobado generará exactamente un egreso en la caja seleccionada.</p></> : <p className="text-sm text-gray-600">El gasto quedará rechazado y no se eliminará.</p>
+              action === "expense-approve" ? <><Field label="Caja de aplicación *"><select name="sesion_caja_id" required className={input}><option value="">Selecciona una sesión abierta</option>{openSessions.map((session) => <option key={session.id} value={session.id}>{session.sucursales?.nombre ?? "Sucursal imputada"} · Sesión {session.id.slice(0, 8).toUpperCase()}</option>)}</select></Field><p className="text-sm text-gray-600">Solo se muestran cajas abiertas de la sucursal imputada. El gasto generará exactamente un egreso.</p></> : <p className="text-sm text-gray-600">El gasto quedará rechazado y no se eliminará.</p>
             )}
             {action === "sale-return" && (
               <>
