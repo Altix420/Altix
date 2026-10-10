@@ -52,13 +52,22 @@ Q39,500.
 
 ## Implementación y alcance
 
-- Migración 045: **no requerida**; 044 ya contiene el contrato correcto.
+- Migración 045: requerida para retirar el bloqueo incorrecto de pendientes.
 - Migraciones 001-044: sin modificaciones.
 - Datos financieros PROD: no alterados durante el diagnóstico.
 - Sucursales y vendedores: no creados.
 - Cleanup: no ejecutado.
 - UUIDs de pruebas: no agregados al código. La consulta usa la sucursal de la
   solicitud y funciona igual para sucursales nuevas.
+
+Backup pre-045 creado y validado antes de aplicar PROD:
+
+- Archivo cifrado: `/Users/chriis/Library/Application Support/ALTIX/backups/altix-prod-pre-045-20261010T035531Z.tar.gz.enc`.
+- Tamaño: 266384 bytes.
+- SHA-256: `f4dbec8b762694067a0b25eb156391127caa1d76785f07cda3ee7bda4721fb86`.
+- AES-256-CBC con PBKDF2 y salt.
+- Verificación de checksum y descifrado/listado: PASS, 7 entradas.
+- Backup fuente conservado; no se ejecutó restore ni cleanup.
 
 ## Validaciones locales
 
@@ -96,6 +105,55 @@ La sesión PROD tiene esta resolución:
 
 La UI ya traduce este error a: `No se puede cerrar la caja mientras exista un
 gasto pendiente de aprobación.` No se requiere migración 045.
+
+## Segunda causa: pendientes bloqueaban indebidamente el cierre
+
+La condición incorrecta estaba dentro de 044:
+
+```sql
+IF EXISTS (
+  SELECT 1 FROM public.gastos
+  WHERE sesion_caja_id = p_sesion_caja_id AND estado = 'pendiente'
+) THEN RAISE EXCEPTION ...;
+END IF;
+```
+
+Esto no era compatible con el contrato financiero: `pendiente` no crea
+movimiento y no debe afectar efectivo esperado, diferencia ni cierre. La
+migración 045 elimina únicamente ese bloqueo. No cambia
+`calcular_efectivo_esperado`, la autorización, las denominaciones ni la
+inmutabilidad de una sesión cerrada.
+
+Después del cierre, un gasto pendiente sigue pendiente. Si se aprueba después,
+`resolver_gasto` exige una nueva sesión abierta de la misma sucursal y crea el
+egreso en esa sesión; nunca modifica la sesión histórica cerrada. El rechazo
+no crea movimiento.
+
+## Migración 045
+
+- Archivo: `20261012000000_045_allow_pending_expense_cash_close.sql`.
+- Alcance: reemplaza `cerrar_caja(UUID, JSONB)` sin la condición de bloqueo por
+  gastos pendientes.
+- No modifica migraciones 001-044.
+- No altera datos ni ejecuta cleanup.
+
+Estado previo a PROD:
+
+- `supabase migration list --linked`: local 045, remoto 044.
+- `supabase db push --dry-run --linked`: únicamente 045 pendiente.
+
+## Pruebas locales 045
+
+PASS en una transacción local después de `supabase db reset`:
+
+- A/B: gasto aprobado descuenta Q50 exactamente una vez; dos pendientes no
+  impiden cerrar en Q4,950 con diferencia Q0.
+- C: gasto rechazado no crea movimiento.
+- D: múltiples pendientes permanecen pendientes después del cierre.
+- E: aprobación posterior usa una nueva caja abierta; la caja histórica no
+  recibe movimiento.
+- F: segunda sucursal y vendedor siguen el mismo contrato sin UUIDs de
+  aplicación.
 
 Falta validar en PROD, con sesión autenticada, la secuencia no destructiva
 después de resolver el gasto pendiente:
