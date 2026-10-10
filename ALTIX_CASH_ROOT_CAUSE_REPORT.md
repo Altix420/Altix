@@ -69,6 +69,15 @@ Backup pre-045 creado y validado antes de aplicar PROD:
 - Verificación de checksum y descifrado/listado: PASS, 7 entradas.
 - Backup fuente conservado; no se ejecutó restore ni cleanup.
 
+Backup pre-045 creado y validado antes de aplicar PROD:
+
+- Archivo cifrado: `/Users/chriis/Library/Application Support/ALTIX/backups/altix-prod-pre-045-20261010T035531Z.tar.gz.enc`.
+- Tamaño: 266384 bytes.
+- SHA-256: `f4dbec8b762694067a0b25eb156391127caa1d76785f07cda3ee7bda4721fb86`.
+- AES-256-CBC con PBKDF2 y salt.
+- Verificación de checksum y descifrado/listado: PASS, 7 entradas.
+- Backup fuente conservado; no se ejecutó restore ni cleanup.
+
 ## Validaciones locales
 
 - `supabase db reset`: PASS, migrations 001-044.
@@ -136,11 +145,8 @@ no crea movimiento.
   gastos pendientes.
 - No modifica migraciones 001-044.
 - No altera datos ni ejecuta cleanup.
-
-Estado previo a PROD:
-
-- `supabase migration list --linked`: local 045, remoto 044.
-- `supabase db push --dry-run --linked`: únicamente 045 pendiente.
+- PROD aplicada: `20261012000000`.
+- `supabase migration list --linked`: local y remoto alineados hasta 045.
 
 ## Pruebas locales 045
 
@@ -155,12 +161,16 @@ PASS en una transacción local después de `supabase db reset`:
 - F: segunda sucursal y vendedor siguen el mismo contrato sin UUIDs de
   aplicación.
 
-Falta validar en PROD, con sesión autenticada, la secuencia no destructiva
-después de resolver el gasto pendiente:
+## Prueba PROD post-045
 
-1. Admin aprueba un gasto pendiente seleccionando automáticamente la caja
-   abierta de su sucursal imputada.
-2. El gasto crea exactamente un egreso y reduce el esperado.
-3. El vendedor cierra esa misma caja con el conteo físico.
-4. Se verifica una segunda sucursal y que Admin no sea propietario de la caja.
+PASS sin aprobar ni rechazar `Almuerzo personal`:
+
+- Sesión `e163d166-d4fc-469d-84ac-df924f9b5ba2` cerrada por Admin.
+- Conteo físico: Q20,450 (`q200=102`, `q50=1`, resto 0).
+- Esperado RPC: Q20,450.
+- Diferencia: Q0.
+- Movimientos antes y después: 6; no se creó movimiento por el pendiente.
+- `Almuerzo personal`: continúa `pendiente`, Q400, sin `movimiento_caja_id`.
+- Intento de segundo cierre: rechazado por sesión ya cerrada; la sesión quedó
+  inmutable.
 
