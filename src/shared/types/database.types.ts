@@ -1,6 +1,11 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5";
+  };
   public: {
     Tables: {
       ajustes_comision: {
@@ -119,7 +124,7 @@ export type Database = {
       aprobaciones: {
         Row: {
           created_at: string;
-          datos_solicitados: NonNullable<Json>;
+          datos_solicitados: Json;
           estado: string;
           id: string;
           motivo: string;
@@ -137,7 +142,7 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
-          datos_solicitados?: NonNullable<Json>;
+          datos_solicitados?: Json;
           estado?: string;
           id?: string;
           motivo: string;
@@ -155,7 +160,7 @@ export type Database = {
         };
         Update: {
           created_at?: string;
-          datos_solicitados?: NonNullable<Json>;
+          datos_solicitados?: Json;
           estado?: string;
           id?: string;
           motivo?: string;
@@ -443,7 +448,7 @@ export type Database = {
         };
         Insert: {
           conteo_id?: string | null;
-          diferencia?: never;
+          diferencia?: number | null;
           id?: string;
           producto_id?: string | null;
           stock_fisico: number;
@@ -451,7 +456,7 @@ export type Database = {
         };
         Update: {
           conteo_id?: string | null;
-          diferencia?: never;
+          diferencia?: number | null;
           id?: string;
           producto_id?: string | null;
           stock_fisico?: number;
@@ -518,7 +523,7 @@ export type Database = {
           observaciones: string | null;
           precio_unitario: number;
           producto_id: string | null;
-          snapshot_economico: NonNullable<Json>;
+          snapshot_economico: Json;
           subtotal: number;
           unidad_venta_snapshot: string;
         };
@@ -532,7 +537,7 @@ export type Database = {
           observaciones?: string | null;
           precio_unitario: number;
           producto_id?: string | null;
-          snapshot_economico?: NonNullable<Json>;
+          snapshot_economico?: Json;
           subtotal: number;
           unidad_venta_snapshot?: string;
         };
@@ -546,7 +551,7 @@ export type Database = {
           observaciones?: string | null;
           precio_unitario?: number;
           producto_id?: string | null;
-          snapshot_economico?: NonNullable<Json>;
+          snapshot_economico?: Json;
           subtotal?: number;
           unidad_venta_snapshot?: string;
         };
@@ -1787,7 +1792,7 @@ export type Database = {
           pedido_id: string | null;
           precio_unitario: number;
           producto_id: string | null;
-          snapshot_economico: NonNullable<Json>;
+          snapshot_economico: Json;
           subtotal: number;
           unidad_venta_snapshot: string;
         };
@@ -1801,7 +1806,7 @@ export type Database = {
           pedido_id?: string | null;
           precio_unitario: number;
           producto_id?: string | null;
-          snapshot_economico?: NonNullable<Json>;
+          snapshot_economico?: Json;
           subtotal: number;
           unidad_venta_snapshot?: string;
         };
@@ -1815,7 +1820,7 @@ export type Database = {
           pedido_id?: string | null;
           precio_unitario?: number;
           producto_id?: string | null;
-          snapshot_economico?: NonNullable<Json>;
+          snapshot_economico?: Json;
           subtotal?: number;
           unidad_venta_snapshot?: string;
         };
@@ -2260,7 +2265,7 @@ export type Database = {
           sucursal_id: string;
         };
         Insert: {
-          delta?: never;
+          delta?: number | null;
           estado?: string;
           id?: string;
           motivo: string;
@@ -2275,7 +2280,7 @@ export type Database = {
           sucursal_id: string;
         };
         Update: {
-          delta?: never;
+          delta?: number | null;
           estado?: string;
           id?: string;
           motivo?: string;
@@ -2532,7 +2537,7 @@ export type Database = {
           id: string;
           precio_unitario: number;
           producto_id: string | null;
-          snapshot_economico: NonNullable<Json>;
+          snapshot_economico: Json;
           subtotal: number;
           unidad_venta_snapshot: string;
           venta_id: string | null;
@@ -2545,7 +2550,7 @@ export type Database = {
           id?: string;
           precio_unitario: number;
           producto_id?: string | null;
-          snapshot_economico?: NonNullable<Json>;
+          snapshot_economico?: Json;
           subtotal: number;
           unidad_venta_snapshot?: string;
           venta_id?: string | null;
@@ -2558,7 +2563,7 @@ export type Database = {
           id?: string;
           precio_unitario?: number;
           producto_id?: string | null;
-          snapshot_economico?: NonNullable<Json>;
+          snapshot_economico?: Json;
           subtotal?: number;
           unidad_venta_snapshot?: string;
           venta_id?: string | null;
@@ -2604,6 +2609,7 @@ export type Database = {
           forma_pago: Database["public"]["Enums"]["metodo_pago"];
           id: string;
           operation_id: string | null;
+          pagos_snapshot: Json;
           pedido_id: string | null;
           sucursal_id: string | null;
           total: number;
@@ -2618,6 +2624,7 @@ export type Database = {
           forma_pago?: Database["public"]["Enums"]["metodo_pago"];
           id?: string;
           operation_id?: string | null;
+          pagos_snapshot?: Json;
           pedido_id?: string | null;
           sucursal_id?: string | null;
           total: number;
@@ -2632,6 +2639,7 @@ export type Database = {
           forma_pago?: Database["public"]["Enums"]["metodo_pago"];
           id?: string;
           operation_id?: string | null;
+          pagos_snapshot?: Json;
           pedido_id?: string | null;
           sucursal_id?: string | null;
           total?: number;
@@ -2681,7 +2689,11 @@ export type Database = {
     };
     Functions: {
       abrir_caja: {
-        Args: { p_monto_apertura: number; p_sucursal_id: string; p_usuario_id: string };
+        Args: {
+          p_monto_apertura: number;
+          p_sucursal_id: string;
+          p_usuario_id: string;
+        };
         Returns: string;
       };
       actualizar_comision_mensual: {
@@ -2737,9 +2749,20 @@ export type Database = {
         Args: { p_ajuste_id: string; p_aprobado_por: string };
         Returns: string;
       };
-      cerrar_caja: { Args: { p_denominaciones: Json; p_sesion_caja_id: string }; Returns: Json };
+      calcular_efectivo_esperado: {
+        Args: { p_sesion_caja_id: string };
+        Returns: number;
+      };
+      cerrar_caja: {
+        Args: { p_denominaciones: Json; p_sesion_caja_id: string };
+        Returns: Json;
+      };
       configurar_costo_producto: {
-        Args: { p_admin_id?: string; p_costo_unitario: number; p_producto_id: string };
+        Args: {
+          p_admin_id?: string;
+          p_costo_unitario: number;
+          p_producto_id: string;
+        };
         Returns: undefined;
       };
       configurar_credito_cliente: {
@@ -2797,7 +2820,10 @@ export type Database = {
         };
         Returns: string;
       };
-      convertir_cotizacion_pedido: { Args: { p_cotizacion_id: string }; Returns: string };
+      convertir_cotizacion_pedido: {
+        Args: { p_cotizacion_id: string };
+        Returns: string;
+      };
       crear_cliente_mayorista: {
         Args: {
           p_direccion?: string;
@@ -2809,7 +2835,10 @@ export type Database = {
         };
         Returns: string;
       };
-      crear_conteo: { Args: { p_realizado_por: string; p_sucursal_id: string }; Returns: string };
+      crear_conteo: {
+        Args: { p_realizado_por: string; p_sucursal_id: string };
+        Returns: string;
+      };
       crear_cotizacion: {
         Args: {
           p_aprobacion_id?: string;
@@ -2894,9 +2923,13 @@ export type Database = {
         };
         Returns: string;
       };
-      marcar_aprobaciones_vistas: { Args: Record<PropertyKey, never>; Returns: number };
+      marcar_aprobaciones_vistas: { Args: never; Returns: number };
       marcar_entrega: {
-        Args: { p_observaciones?: string; p_pedido_id: string; p_recibido_por: string };
+        Args: {
+          p_observaciones?: string;
+          p_pedido_id: string;
+          p_recibido_por: string;
+        };
         Returns: string;
       };
       marcar_pedido_entregado: {
@@ -2921,13 +2954,21 @@ export type Database = {
         Args: { p_desde?: string; p_hasta?: string; p_sucursal_id?: string };
         Returns: Json;
       };
-      obtener_dashboard_vendedor: { Args: { p_vendedor_id?: string }; Returns: Json };
+      obtener_dashboard_vendedor: {
+        Args: { p_vendedor_id?: string };
+        Returns: Json;
+      };
       obtener_reporte_inventario_mensual: {
         Args: { p_mes: string; p_sucursal_id?: string };
         Returns: Json;
       };
       obtener_reporte_ventas: {
-        Args: { p_desde: string; p_hasta: string; p_sucursal_id?: string; p_vendedor_id?: string };
+        Args: {
+          p_desde: string;
+          p_hasta: string;
+          p_sucursal_id?: string;
+          p_vendedor_id?: string;
+        };
         Returns: Json;
       };
       reasignar_cartera: {
@@ -3068,7 +3109,11 @@ export type Database = {
         Returns: string;
       };
       registrar_pedido_venta: {
-        Args: { p_operation_id?: string; p_pedido_id: string; p_registrado_por?: string };
+        Args: {
+          p_operation_id?: string;
+          p_pedido_id: string;
+          p_registrado_por?: string;
+        };
         Returns: string;
       };
       registrar_venta: {
@@ -3103,8 +3148,8 @@ export type Database = {
         };
         Returns: string;
       };
-      revisar_vencimientos_credito: { Args: Record<PropertyKey, never>; Returns: undefined };
-      show_limit: { Args: Record<PropertyKey, never>; Returns: number };
+      revisar_vencimientos_credito: { Args: never; Returns: undefined };
+      show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
       solicitar_ajuste_inventario: {
         Args: {
@@ -3132,7 +3177,11 @@ export type Database = {
         Returns: string;
       };
       solicitar_credito_cliente: {
-        Args: { p_cliente_id: string; p_monto_solicitado: number; p_solicitado_por: string };
+        Args: {
+          p_cliente_id: string;
+          p_monto_solicitado: number;
+          p_solicitado_por: string;
+        };
         Returns: undefined;
       };
       trasladar_inventario: {
@@ -3183,7 +3232,9 @@ export type Tables<
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never) = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R;
@@ -3207,7 +3258,9 @@ export type TablesInsert<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never) = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I;
     }
@@ -3230,7 +3283,9 @@ export type TablesUpdate<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never) = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U;
     }
@@ -3253,7 +3308,9 @@ export type Enums<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never) = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
@@ -3268,7 +3325,9 @@ export type CompositeTypes<
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never) = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
