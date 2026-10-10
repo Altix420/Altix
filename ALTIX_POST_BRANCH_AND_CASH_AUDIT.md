@@ -102,12 +102,14 @@ El único UUID de sucursal en código es `FFERSSI_CENTRAL_BRANCH_ID`, permitido 
 
 ## 13. Estado de deploy
 
-- Commit local actual: pendiente de push después de esta auditoría final.
-- Cloudflare Pages: la versión publicada anterior responde HTTP 200; el bundle 044 aún requiere el push final.
+- Commit publicado en `main`: `1f870167a6e6c984a948ba1074f61d7679d8a651` (`finalize post-044 branch and cash audit`).
+- Cloudflare Pages: `https://altix.pages.dev/` responde HTTP 200.
+- Bundle publicado: `assets/index-wdQbt7zP.js`; contiene el Error Boundary Vendor de esta tanda.
+- CSS publicado: `assets/index-DsUwx72p.css`, coincidente con el build local.
+- El deploy automático de `main` quedó publicado y verificado mediante HTTP y contenido del bundle.
 - Netlify: no usado.
 
 ## Pendientes reales
 
 1. Ejecutar smoke test manual en teléfono real a 360, 390 y 430 px.
-2. Hacer push de `main` y confirmar el bundle nuevo en Cloudflare Pages.
-3. No ejecutar cleanup hasta completar el smoke test manual.
+2. No ejecutar cleanup hasta completar el smoke test manual.
