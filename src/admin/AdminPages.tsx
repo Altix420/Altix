@@ -1,6 +1,6 @@
 /* eslint-disable react/set-state-in-effect */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { CircleAlert, Download, RefreshCw, Search } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "../shared/lib/supabase";
 import { AdminDesignsPage, AdminExtrasPage } from "./AdminCatalogForms";
@@ -12,6 +12,24 @@ import { AdminProfitDashboardPage, AdminReportsPage } from "./AdminAnalyticsPage
 import { PrintDocumentButton } from "../shared/printing/PrintDocumentButton";
 import { ProductImage, type ProductImageSource } from "../shared/product-images";
 import { downloadExcel, toExcelDateText } from "../shared/export/excel";
+import {
+  Badge,
+  EmptyState,
+  ErrorBanner,
+  FilterBar,
+  KpiCard,
+  PageHeader,
+  SearchBar,
+  SuccessBanner,
+  Table,
+  TableWrapper,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tr,
+} from "../shared/components/ui";
+
 
 type AdminRow = Record<string, unknown>;
 type Branch = { id: string; nombre: string };
@@ -1041,60 +1059,87 @@ const AdminDataListPage: React.FC<{ module: string; embedded?: boolean }> = ({
       showHeader={!embedded}
       headerActions={headerActions}
     >
-      <div className="mb-5 flex flex-col gap-3 border-b border-gray-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar"
-            className="w-full border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-blue-600"
-          />
-        </div>
-        {module === "ventas" && <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500"><label>Desde<input type="date" value={salesFrom} onChange={(event) => setSalesFrom(event.target.value)} className="ml-1 border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900" /></label><label>Hasta<input type="date" value={salesTo} onChange={(event) => setSalesTo(event.target.value)} className="ml-1 border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900" /></label><button type="button" onClick={() => { const now = new Date(); setSalesFrom(new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10)); setSalesTo(new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10)); }} className="border border-gray-300 px-2 py-2 text-sm text-gray-700">Mes anterior</button></div>}
-      </div>
-      {loading && <State message="Cargando información..." />}
-      {error && (
-        <div className="flex items-center justify-between border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          <span className="flex items-center gap-2">
-            <CircleAlert size={16} /> {error}
-          </span>
-          <button onClick={() => void load()} className="font-medium underline">
-            Reintentar
-          </button>
-        </div>
-      )}
-      {success && (
-        <div className="border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-          {success}
-        </div>
-      )}
+      {/* Filters row */}
+      <FilterBar>
+        <SearchBar
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Buscar en la tabla..."
+          containerClass="flex-1 max-w-sm"
+        />
+        {module === "ventas" && (
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[--altix-text-muted]">
+            <label>
+              Desde
+              <input
+                type="date"
+                value={salesFrom}
+                onChange={(event) => setSalesFrom(event.target.value)}
+                className="altix-input ml-1.5 w-auto px-2 py-1.5 text-sm"
+              />
+            </label>
+            <label>
+              Hasta
+              <input
+                type="date"
+                value={salesTo}
+                onChange={(event) => setSalesTo(event.target.value)}
+                className="altix-input ml-1.5 w-auto px-2 py-1.5 text-sm"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                const now = new Date();
+                setSalesFrom(new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10));
+                setSalesTo(new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10));
+              }}
+              className="altix-button altix-button-secondary h-8 px-3 text-xs"
+            >
+              Mes anterior
+            </button>
+          </div>
+        )}
+      </FilterBar>
+
+      {/* Feedback banners */}
+      {loading && <EmptyState message="Cargando información..." />}
+      {error && <ErrorBanner message={error} onRetry={() => void load()} />}
+      {success && <SuccessBanner message={success} />}
+
+      {/* Empty state */}
       {!loading && !error && filtered.length === 0 && (
-        <State message="No hay registros para mostrar." />
+        <EmptyState message="No hay registros para mostrar." />
       )}
+
+      {/* Table */}
       {!loading && !error && filtered.length > 0 && (
-        <div className="overflow-x-auto border border-gray-200 bg-white">
-          <table className="w-full min-w-[680px] text-left text-sm">
-            <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+        <TableWrapper>
+          <Table className="min-w-[680px]">
+            <Thead>
               <tr>
                 {config.columns.map(([label]) => (
-                  <th key={label} className="px-4 py-3 font-medium">
-                    {label}
-                  </th>
+                  <Th key={label}>{label}</Th>
                 ))}
-                {config.rowActions && <th className="px-4 py-3 text-right">Acciones</th>}
+                {config.rowActions && <Th align="right">Acciones</Th>}
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+            </Thead>
+            <Tbody>
               {filtered.map((row, index) => (
-                <tr key={String(row.id ?? index)} className="hover:bg-gray-50">
+                <Tr key={String(row.id ?? index)}>
                   {config.columns.map(([label, key]) => (
-                    <td key={label} className="max-w-[220px] truncate px-4 py-3 text-gray-700">
-                      {key === "imagen" ? <ProductImage product={(module === "inventario" ? row.productos : row) as ProductImageSource} alt={String(isRecord(row.productos) ? row.productos.nombre : row.nombre ?? "Producto")} className="h-12 w-12" /> : renderValue(row[key], key)}
-                    </td>
+                    <Td key={label} className="max-w-[220px] truncate">
+                      {key === "imagen"
+                        ? <ProductImage
+                            product={(module === "inventario" ? row.productos : row) as ProductImageSource}
+                            alt={String(isRecord(row.productos) ? row.productos.nombre : row.nombre ?? "Producto")}
+                            className="h-12 w-12"
+                          />
+                        : renderValue(row[key], key)}
+                    </Td>
                   ))}
                   {config.rowActions && (
-                    <td className="px-4 py-3">
+                    <Td align="right">
                       <div className="flex flex-wrap justify-end gap-2">
                         {config.rowActions
                           .filter((action) => canUse(action, row))
@@ -1106,28 +1151,62 @@ const AdminDataListPage: React.FC<{ module: string; embedded?: boolean }> = ({
                               onDone={actionDone}
                             />
                           ))}
-                        {module === "ventas" && Boolean(row.id) && <button type="button" onClick={() => setSaleDetail(row)} className="text-xs font-medium text-blue-700">Ver detalle</button>}
-                        {module === "conteo" && Boolean(row.id) && <button type="button" onClick={() => setCountDetail(row)} className="text-xs font-medium text-blue-700">Ver diferencias</button>}
-                        {(module === "ventas" || module === "pedidos" || (module === "cotizaciones" && !["pendiente", "rechazada"].includes(String(row.aprobacion_descuento)))) && Boolean(row.id) && (
-                          <PrintDocumentButton kind={module === "ventas" ? "sale" : module === "cotizaciones" ? "quotation" : "order"} documentId={String(row.id)} />
+                        {module === "ventas" && Boolean(row.id) && (
+                          <button
+                            type="button"
+                            onClick={() => setSaleDetail(row)}
+                            className="text-xs font-semibold text-[--altix-primary] hover:underline"
+                          >
+                            Ver detalle
+                          </button>
                         )}
+                        {module === "conteo" && Boolean(row.id) && (
+                          <button
+                            type="button"
+                            onClick={() => setCountDetail(row)}
+                            className="text-xs font-semibold text-[--altix-primary] hover:underline"
+                          >
+                            Ver diferencias
+                          </button>
+                        )}
+                        {(module === "ventas" ||
+                          module === "pedidos" ||
+                          (module === "cotizaciones" &&
+                            !["pendiente", "rechazada"].includes(String(row.aprobacion_descuento)))) &&
+                          Boolean(row.id) && (
+                            <PrintDocumentButton
+                              kind={module === "ventas" ? "sale" : module === "cotizaciones" ? "quotation" : "order"}
+                              documentId={String(row.id)}
+                            />
+                          )}
                       </div>
-                    </td>
+                    </Td>
                   )}
-                  {!config.rowActions && (module === "ventas" || module === "pedidos" || (module === "cotizaciones" && !["pendiente", "rechazada"].includes(String(row.aprobacion_descuento)))) && (
-                    <td className="px-4 py-3 text-right"><PrintDocumentButton kind={module === "ventas" ? "sale" : module === "cotizaciones" ? "quotation" : "order"} documentId={String(row.id)} /></td>
-                  )}
-                </tr>
+                  {!config.rowActions &&
+                    (module === "ventas" ||
+                      module === "pedidos" ||
+                      (module === "cotizaciones" &&
+                        !["pendiente", "rechazada"].includes(String(row.aprobacion_descuento)))) && (
+                      <Td align="right">
+                        <PrintDocumentButton
+                          kind={module === "ventas" ? "sale" : module === "cotizaciones" ? "quotation" : "order"}
+                          documentId={String(row.id)}
+                        />
+                      </Td>
+                    )}
+                </Tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </Tbody>
+          </Table>
+        </TableWrapper>
       )}
       {saleDetail && <AdminSaleDetail row={saleDetail} onClose={() => setSaleDetail(null)} />}
       {countDetail && <AdminCountDetail row={countDetail} onClose={() => setCountDetail(null)} />}
     </PageFrame>
   );
 };
+
+
 
 export const AdminListPage: React.FC<{ module: string; embedded?: boolean }> = ({
   module,
@@ -1520,12 +1599,31 @@ const renderValue = (value: unknown, key: string) => {
   )
     return money(value);
   if (key.includes("created") || key.includes("fecha")) return date(value);
-  if (key === "entregada") return value === true ? "Entregada" : "Pendiente";
+  if (key === "entregada")
+    return value === true
+      ? <Badge variant="success">Entregada</Badge>
+      : <Badge variant="neutral">Pendiente</Badge>;
   if (key === "forma_pago") return String(value ?? "—").replaceAll("_", " ");
-  if (typeof value === "boolean") return value ? "Activo" : "Inactivo";
-  if (isRecord(value)) return String(value.nombre ?? value.nombre_completo ?? value.sku ?? (value.id ? `#${String(value.id).slice(0, 8).toUpperCase()}` : "—"));
+  if (typeof value === "boolean")
+    return value
+      ? <Badge variant="success">Activo</Badge>
+      : <Badge variant="neutral">Inactivo</Badge>;
+  if (isRecord(value))
+    return String(value.nombre ?? value.nombre_completo ?? value.sku ?? (value.id ? `#${String(value.id).slice(0, 8).toUpperCase()}` : "—"));
   const text = String(value ?? "—");
   if ((key === "id" || key.endsWith("_id")) && text !== "—") return `#${text.slice(0, 8).toUpperCase()}`;
+  // Status badges for common state fields
+  if (key === "estado" || key === "aprobacion_descuento" || key === "activa") {
+    const statusMap: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
+      activo: "success", activa: "success", abierta: "success",
+      aprobada: "success", entregado: "success", completado: "success", cerrada: "success",
+      pendiente: "warning", en_proceso: "warning", en_produccion: "warning", enviada: "info",
+      rechazada: "danger", cancelado: "danger",
+      listo: "info", "sin descuento": "neutral", historial: "neutral",
+    };
+    const variant = statusMap[text.toLowerCase()] ?? "neutral";
+    return <Badge variant={variant}>{text.replaceAll("_", " ")}</Badge>;
+  }
   return text.length > 32 ? `${text.slice(0, 32)}…` : text;
 };
 
@@ -1552,33 +1650,31 @@ export const AdminDashboardLegacy: React.FC = () => {
       description="Resumen de actividad del negocio y accesos de control."
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          ["Ventas", counts.ventas],
-          ["Clientes", counts.clientes],
-          ["Productos", counts.productos],
-          ["Cuentas por cobrar", counts.creditos],
-        ].map(([label, value]) => (
-          <div key={String(label)} className="border border-gray-200 bg-white p-5">
-            <p className="text-xs uppercase tracking-wide text-gray-400">{label}</p>
-            <p className="mt-3 text-2xl font-semibold text-gray-950">{value ?? "—"}</p>
-          </div>
+        {([
+          ["Ventas", counts.ventas, "blue"],
+          ["Clientes", counts.clientes, "green"],
+          ["Productos", counts.productos, "amber"],
+          ["Cuentas por cobrar", counts.creditos, "neutral"],
+        ] as const).map(([label, value, color]) => (
+          <KpiCard key={label} label={label} value={value ?? "—"} color={color} />
         ))}
       </div>
-      <div className="mt-8 border-t border-gray-200 pt-6">
-        <h2 className="text-base font-semibold text-gray-950">Control operativo</h2>
+      <div className="mt-6 border-t border-[--altix-border] pt-6">
+        <h2 className="text-sm font-semibold text-[--altix-text-primary]">Control operativo</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
+          {([
             ["/admin/ventas", "Ver ventas"],
             ["/admin/caja", "Ver caja"],
             ["/admin/creditos", "Ver crédito"],
             ["/admin/inventario", "Ver inventario"],
-          ].map(([href, label]) => (
+          ] as const).map(([href, label]) => (
             <Link
               key={href}
               to={href}
-              className="border border-gray-200 bg-white p-4 text-sm font-medium hover:border-blue-300 hover:text-blue-700"
+              className="flex items-center justify-between rounded-[--altix-radius-md] border border-[--altix-border] bg-[--altix-surface] p-4 text-sm font-medium text-[--altix-text-secondary] shadow-[--altix-shadow-xs] transition-colors hover:border-blue-300 hover:text-[--altix-primary]"
             >
               {label}
+              <span className="text-[--altix-text-muted]">→</span>
             </Link>
           ))}
         </div>
@@ -1606,36 +1702,22 @@ const PageFrame = ({
 }) => (
   <div className="space-y-6">
     {showHeader ? (
-      <header className="flex flex-col gap-4 border-b border-gray-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-gray-400">
-            Administración
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-950">{title}</h1>
-          <p className="mt-2 text-sm text-gray-500">{description}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {onRefresh && (
-            <button
-              onClick={onRefresh}
-              title="Actualizar"
-              className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-            >
-              <RefreshCw size={17} />
-            </button>
-          )}
-          {headerActions}
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Administración"
+        title={title}
+        description={description}
+        onRefresh={onRefresh}
+        actions={headerActions}
+      />
     ) : (
       onRefresh && (
         <div className="flex justify-end">
           <button
             onClick={onRefresh}
             title="Actualizar"
-            className="p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[--altix-border] text-[--altix-text-muted] transition-colors hover:border-[--altix-border-strong] hover:bg-gray-50 hover:text-[--altix-text-primary]"
           >
-            <RefreshCw size={17} />
+            <RefreshCw size={15} />
           </button>
         </div>
       )
@@ -1643,8 +1725,7 @@ const PageFrame = ({
     {children}
   </div>
 );
+
 const State = ({ message }: { message: string }) => (
-  <div className="border border-gray-200 bg-white p-10 text-center text-sm text-gray-500">
-    {message}
-  </div>
+  <EmptyState message={message} />
 );
