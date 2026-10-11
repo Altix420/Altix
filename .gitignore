@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 *.tsbuildinfo
+
+# Operational production cleanup script; never include in visual branches.
+/cleanup_final_prod.sql
