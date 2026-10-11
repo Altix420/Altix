@@ -81,7 +81,7 @@ export const VendorLayout: React.FC = () => {
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`);
 
   return (
-    <div className="altix-safe-bottom min-h-screen md:pb-0" style={{ background: 'var(--altix-background)', color: 'var(--altix-text-primary)' }}>
+    <div className="altix-shell-v2 altix-safe-bottom min-h-screen md:pb-0" style={{ background: 'var(--altix-background)', color: 'var(--altix-text-primary)' }}>
 
       {/* ── Sidebar (desktop) ── */}
       <aside

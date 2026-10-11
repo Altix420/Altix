@@ -40,7 +40,7 @@ export const Layout: React.FC = () => {
   const secondaryItems = allItems.filter(([label]) => !mobileItems.some(([mobileLabel]) => mobileLabel === label));
 
   return (
-    <div className="min-h-screen text-gray-900" style={{ background: 'var(--altix-background)' }}>
+    <div className="altix-shell-v2 min-h-screen text-gray-900" style={{ background: 'var(--altix-background)' }}>
 
       {/* ── Sidebar (desktop) ── */}
       <aside

@@ -242,3 +242,51 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   padding: 3rem 1.5rem;
   color: var(--altix-text-muted);
 }
+
+/* ─── Legacy module compatibility layer ───
+   Existing admin/vendor views keep their functional markup and utility classes.
+   These scoped rules bring those surfaces into the shared visual system. */
+.altix-shell-v2 .border-gray-200 { border-color: var(--altix-border); }
+.altix-shell-v2 .border-gray-300 { border-color: var(--altix-border-strong); }
+.altix-shell-v2 .border-gray-100 { border-color: var(--altix-border); }
+.altix-shell-v2 .bg-white { background-color: var(--altix-surface); }
+.altix-shell-v2 .bg-gray-50 { background-color: var(--altix-surface-subtle); }
+.altix-shell-v2 .text-gray-950,
+.altix-shell-v2 .text-gray-900 { color: var(--altix-text-primary); }
+.altix-shell-v2 .text-gray-700,
+.altix-shell-v2 .text-gray-600 { color: var(--altix-text-secondary); }
+.altix-shell-v2 .text-gray-500,
+.altix-shell-v2 .text-gray-400 { color: var(--altix-text-muted); }
+.altix-shell-v2 .hover\:bg-gray-50:hover { background-color: var(--altix-surface-subtle); }
+.altix-shell-v2 .hover\:bg-gray-100:hover { background-color: var(--altix-surface-subtle); }
+.altix-shell-v2 .bg-blue-700 { background-color: var(--altix-primary); }
+.altix-shell-v2 .hover\:bg-blue-800:hover { background-color: var(--altix-primary-strong); }
+.altix-shell-v2 .text-blue-700 { color: var(--altix-primary-text); }
+.altix-shell-v2 .bg-red-50 { background-color: var(--altix-danger-bg); }
+.altix-shell-v2 .bg-green-50 { background-color: var(--altix-success-bg); }
+.altix-shell-v2 .bg-amber-50 { background-color: var(--altix-warning-bg); }
+.altix-shell-v2 input:not([type='checkbox']):not([type='radio']):not([type='file']),
+.altix-shell-v2 select,
+.altix-shell-v2 textarea {
+  border-radius: var(--altix-radius-xs);
+  border-color: var(--altix-border-strong);
+  background-color: var(--altix-surface);
+  color: var(--altix-text-primary);
+}
+.altix-shell-v2 input:not([type='checkbox']):not([type='radio']):not([type='file']):focus,
+.altix-shell-v2 select:focus,
+.altix-shell-v2 textarea:focus {
+  border-color: var(--altix-primary);
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12);
+  outline: none;
+}
+.altix-shell-v2 table thead { color: var(--altix-text-muted); }
+.altix-shell-v2 table tbody tr { border-color: var(--altix-border); }
+.altix-shell-v2 button:not(.altix-button):not(.altix-vendor-button) {
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, opacity 140ms ease;
+}
+@media (max-width: 767px) {
+  .altix-shell-v2 main { padding-left: 1rem; padding-right: 1rem; }
+  .altix-shell-v2 table { font-size: 0.8125rem; }
+  .altix-shell-v2 [class*='max-w-['] { max-width: 100%; }
+}
