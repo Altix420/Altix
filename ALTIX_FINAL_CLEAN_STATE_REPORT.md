@@ -215,3 +215,18 @@ real. No se considera un bug de la limpieza.
 - `npm audit --audit-level=high`: PASS, 0 vulnerabilidades.
 - `git diff --check`: PASS.
 - Prueba manual PROD del botón: pendiente de credenciales reales.
+
+## Diagnóstico posterior en PROD
+
+- El bundle público de `https://altix.pages.dev` contiene el botón `Cerrar
+  sesión` y la vista pendiente de sucursal.
+- El bundle público también contiene `signOut` seguido de navegación a
+  `/login` con `replace`.
+- No se detectó ausencia del deploy funcional en el asset publicado.
+- La PWA utilizaba `altix-shell-v1`; el service worker cacheaba recursos del
+  app shell con una versión fija.
+- Corrección aplicada: caché `altix-shell-v2` y registro con
+  `updateViaCache: 'none'`, conservando `skipWaiting` y `clients.claim`.
+- Auth backend, Supabase, RLS, migraciones y datos PROD: sin cambios.
+- La prueba manual con Vendor real continúa pendiente para confirmar la
+  actualización en el dispositivo afectado.

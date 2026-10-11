@@ -1,4 +1,4 @@
-const CACHE_NAME = 'altix-shell-v1';
+const CACHE_NAME = 'altix-shell-v2';
 const APP_SHELL = ['/', '/index.html', '/manifest.json', '/favicon.svg'];
 const PRIVATE_PREFIXES = ['/rest/', '/auth/', '/functions/', '/storage/', '/graphql'];
 
