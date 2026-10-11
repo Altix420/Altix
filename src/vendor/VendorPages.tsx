@@ -404,24 +404,36 @@ export const VendorPosPage: React.FC = () => {
       supabase.from("inventarios").select("producto_id,stock").eq("sucursal_id", sucursalActiva.id),
       supabase.from("clientes").select("*").eq("activo", true).order("nombre"),
     ]);
-    const failed = [productRows, inventoryRows, clientRows].find(
-      (result) => result.error,
+    const loadErrors: string[] = [];
+    const stockByProduct = new Map(
+      (inventoryRows.data ?? []).map((row) => [row.producto_id, Number(row.stock)]),
     );
-    if (failed?.error) {
-      setError(friendlyAdminError(failed.error, "No se pudo cargar el punto de venta."));
-    } else {
-      const stockByProduct = new Map(
-        (inventoryRows.data ?? []).map((row) => [row.producto_id, Number(row.stock)]),
+    if (productRows.error) {
+      setProducts([]);
+      loadErrors.push(friendlyAdminError(productRows.error, "No se pudo cargar el catálogo."));
+    } else if (inventoryRows.error) {
+      setProducts(
+        ((productRows.data ?? []) as unknown as Product[]).map((product) => ({
+          ...product,
+          stock: 0,
+        })),
       );
+      loadErrors.push(friendlyAdminError(inventoryRows.error, "No se pudo cargar el inventario de la sucursal."));
+    } else {
       setProducts(
         ((productRows.data ?? []) as unknown as Product[]).map((product) => ({
           ...product,
           stock: stockByProduct.get(product.id) ?? 0,
         })),
       );
-      setClients((clientRows.data ?? []) as Client[]);
-      setError(null);
     }
+    if (clientRows.error) {
+      setClients([]);
+      loadErrors.push(friendlyAdminError(clientRows.error, "No se pudieron cargar los clientes."));
+    } else {
+      setClients((clientRows.data ?? []) as Client[]);
+    }
+    setError(loadErrors.length > 0 ? loadErrors.join(" ") : null);
 
     // La caja es un estado operativo independiente del catálogo. Un fallo de
     // esta consulta no debe ocultar productos, inventario ni clientes.
