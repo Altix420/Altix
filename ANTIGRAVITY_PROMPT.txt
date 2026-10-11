@@ -1,0 +1,7 @@
+ALTIX ya está funcional. Trabaja únicamente la capa visual en la rama
+ui/antigravity-redesign. Respeta ANTIGRAVITY_RULES.md,
+ANTIGRAVITY_SAFE_FILES.md y DO_NOT_TOUCH.md. No modifiques lógica, Supabase,
+queries, Auth, handlers, rutas, contratos ni comportamiento. Puedes cambiar
+apariencia, layout, responsive, tipografía, spacing, colores, cards, tablas,
+inputs y navegación visual dentro de los archivos permitidos. Si una mejora
+requiere lógica, no la implementes y repórtala.
