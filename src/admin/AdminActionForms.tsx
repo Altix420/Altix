@@ -13,7 +13,6 @@ import {
   RotateCcw,
   ShieldCheck,
   Truck,
-  X,
 } from "lucide-react";
 import { useAuth } from "../auth/hooks/useAuth";
 import { adminService } from "./admin.service";
@@ -23,6 +22,7 @@ import { friendlyAdminError } from "./admin.errors";
 import type { Json } from "../shared/types/database.types";
 import { offlineDB } from "../shared/offline/db";
 import { createOperationId } from "../shared/operation-id";
+import { Btn, Field, Modal, ErrorBanner } from "../shared/components/ui";
 
 export type AdminAction =
   | "cash-open"
@@ -65,31 +65,9 @@ type CountProduct = {
   productos?: { nombre?: string | null; sku?: string | null } | null;
 };
 
-const input =
-  "w-full border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-600";
-const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({
-  title,
-  onClose,
-  children,
-}) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/30 p-4">
-    <div className="w-full max-w-lg border border-gray-200 bg-white shadow-xl">
-      <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-        <h2 className="font-semibold text-gray-950">{title}</h2>
-        <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-900" title="Cerrar">
-          <X size={17} />
-        </button>
-      </div>
-      <div className="p-5">{children}</div>
-    </div>
-  </div>
-);
-const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <label className="block space-y-1.5">
-    <span className="text-xs font-medium text-gray-600">{label}</span>
-    {children}
-  </label>
-);
+// Legacy alias kept for any inline className usage that remains unchanged
+const input = "altix-input w-full";
+
 
 const labels: Record<AdminAction, string> = {
   "cash-open": "Abrir caja",
@@ -475,13 +453,15 @@ export const AdminActionButton: React.FC<{
   );
   return (
     <>
-      <button
+      <Btn
+        type="button"
+        variant="secondary"
+        size="sm"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:border-blue-500 hover:text-blue-700"
       >
         {icon}
         {labels[action]}
-      </button>
+      </Btn>
       {open && (
         <Modal
           title={labels[action]}
@@ -795,25 +775,24 @@ export const AdminActionButton: React.FC<{
                 </label>
               </>
             )}
-            {error && (
-              <p className="border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>
-            )}
-            <div className="flex justify-end gap-2">
-              <button
+            {error && <ErrorBanner message={error} />}
+            <div className="flex justify-end gap-2 border-t border-[--altix-border] pt-4 mt-2">
+              <Btn
                 type="button"
+                variant="secondary"
                 disabled={submitting}
                 onClick={close}
-                className="border border-gray-300 px-3 py-2 text-sm text-gray-700 disabled:opacity-50"
               >
                 Cancelar
-              </button>
-              <button
+              </Btn>
+              <Btn
                 type="submit"
+                variant="primary"
+                loading={submitting}
                 disabled={submitting || loadingItems}
-                className="bg-blue-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-blue-800"
               >
                 {submitting ? "Procesando..." : "Confirmar"}
-              </button>
+              </Btn>
             </div>
           </form>
         </Modal>
