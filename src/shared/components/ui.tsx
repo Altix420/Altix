@@ -201,13 +201,19 @@ export const Modal: React.FC<{
     role="presentation"
   >
     <div
-      className={`w-full ${maxWidth} overflow-hidden rounded-[--altix-radius-lg] border border-[--altix-border] bg-[--altix-surface] shadow-[--altix-shadow-lg]`}
+      className={`w-full ${maxWidth} overflow-hidden`}
+      style={{
+        backgroundColor: 'var(--altix-surface)',
+        border: '1px solid var(--altix-border)',
+        borderRadius: 'var(--altix-radius-lg)',
+        boxShadow: 'var(--altix-shadow-lg)',
+      }}
       role="dialog"
       aria-modal="true"
       aria-label={title}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[--altix-border] px-5 py-4">
+      <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderBottomColor: 'var(--altix-border)' }}>
         <h2 className="text-base font-semibold text-[--altix-text-primary]">{title}</h2>
         <button
           type="button"
@@ -268,7 +274,13 @@ export const TableWrapper: React.FC<{ children: React.ReactNode; className?: str
   className = '',
 }) => (
   <div
-    className={`overflow-x-auto rounded-[--altix-radius-md] border border-[--altix-border] bg-[--altix-surface] shadow-[--altix-shadow-xs] ${className}`}
+    className={`overflow-x-auto ${className}`}
+    style={{
+      backgroundColor: 'var(--altix-surface)',
+      border: '1px solid var(--altix-border)',
+      borderRadius: 'var(--altix-radius-md)',
+      boxShadow: 'var(--altix-shadow-xs)',
+    }}
   >
     {children}
   </div>
@@ -279,7 +291,7 @@ export const Table: React.FC<{ children: React.ReactNode; className?: string }> 
 );
 
 export const Thead: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <thead className="border-b border-[--altix-border] bg-[--altix-surface-subtle]">{children}</thead>
+  <thead className="border-b" style={{ backgroundColor: 'var(--altix-surface-subtle)', borderBottomColor: 'var(--altix-border)' }}>{children}</thead>
 );
 
 export const Th: React.FC<{ children?: React.ReactNode; className?: string; align?: 'left' | 'right' | 'center' }> = ({
@@ -295,7 +307,7 @@ export const Th: React.FC<{ children?: React.ReactNode; className?: string; alig
 );
 
 export const Tbody: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <tbody className="divide-y divide-[--altix-border]">{children}</tbody>
+  <tbody>{children}</tbody>
 );
 
 export const Tr: React.FC<{ children: React.ReactNode; onClick?: () => void; highlight?: boolean; className?: string }> = ({
@@ -306,7 +318,8 @@ export const Tr: React.FC<{ children: React.ReactNode; onClick?: () => void; hig
 }) => (
   <tr
     onClick={onClick}
-    className={`transition-colors ${onClick ? 'cursor-pointer' : ''} ${highlight ? 'bg-amber-50/40' : 'hover:bg-[--altix-surface-subtle]'} ${className}`}
+    className={`transition-colors ${onClick ? 'cursor-pointer' : ''} ${highlight ? 'bg-amber-50/40' : 'hover:bg-gray-50'} ${className}`}
+    style={{ borderBottom: '1px solid var(--altix-border)' }}
   >
     {children}
   </tr>
@@ -318,7 +331,8 @@ export const Td: React.FC<{ children?: React.ReactNode; className?: string; alig
   align = 'left',
 }) => (
   <td
-    className={`px-4 py-3 text-[--altix-text-secondary] ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : ''} ${className}`}
+    className={`px-4 py-3 ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : ''} ${className}`}
+    style={{ color: 'var(--altix-text-secondary)' }}
   >
     {children}
   </td>
