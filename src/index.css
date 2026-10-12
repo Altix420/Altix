@@ -282,6 +282,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 .altix-shell-v2 table thead { color: var(--altix-text-muted); }
 .altix-shell-v2 table tbody tr { border-color: var(--altix-border); }
+.altix-shell-v2 table th { font-weight: 600; letter-spacing: 0.04em; }
+.altix-shell-v2 table td,
+.altix-shell-v2 table th { vertical-align: middle; }
+.altix-shell-v2 .overflow-x-auto > table { min-width: 100%; }
+.altix-shell-v2 form.border,
+.altix-shell-v2 .overflow-x-auto.border { box-shadow: var(--altix-shadow-xs); }
+.altix-shell-v2 .fixed.inset-0[role='presentation'] { overscroll-behavior: contain; }
 .altix-shell-v2 button:not(.altix-button):not(.altix-vendor-button) {
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, opacity 140ms ease;
 }

@@ -195,9 +195,16 @@ export const Modal: React.FC<{
   children: React.ReactNode;
   maxWidth?: string;
 }> = ({ title, onClose, children, maxWidth = 'max-w-lg' }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgb(15 23 42 / 0.35)' }}>
+  <div
+    className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:items-center sm:p-5"
+    style={{ background: 'rgb(15 23 42 / 0.35)' }}
+    role="presentation"
+  >
     <div
       className={`w-full ${maxWidth} overflow-hidden rounded-[--altix-radius-lg] border border-[--altix-border] bg-[--altix-surface] shadow-[--altix-shadow-lg]`}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[--altix-border] px-5 py-4">
@@ -212,7 +219,7 @@ export const Modal: React.FC<{
         </button>
       </div>
       {/* Body */}
-      <div className="max-h-[80vh] overflow-y-auto px-5 py-5">{children}</div>
+      <div className="max-h-[calc(100vh-7rem)] overflow-y-auto px-4 py-4 sm:max-h-[80vh] sm:px-5 sm:py-5">{children}</div>
     </div>
   </div>
 );

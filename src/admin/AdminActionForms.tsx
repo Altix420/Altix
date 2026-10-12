@@ -489,7 +489,9 @@ export const AdminActionButton: React.FC<{
               </Field>
             )}
             {action === "cash-close" && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-[--altix-radius-sm] border border-[--altix-border] bg-[--altix-surface-subtle] p-3 sm:p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.1em] text-[--altix-text-muted]">Conteo físico</p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {[
                   ["q200", "Cantidad de billetes Q200"],
                   ["q100", "Cantidad de billetes Q100"],
@@ -511,6 +513,7 @@ export const AdminActionButton: React.FC<{
                     />
                   </Field>
                 ))}
+                </div>
               </div>
             )}
             {action === "cash-expense" && (
