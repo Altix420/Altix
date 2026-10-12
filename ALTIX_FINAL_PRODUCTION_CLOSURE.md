@@ -3,6 +3,7 @@
 Fecha: 2026-10-12
 Proyecto Supabase PROD: `tkhwzpocbyonurxwvmcv`
 Commit funcional publicado: `f03af60`
+HEAD final de `main`: `0dcb24f`
 
 ## Corrección visual real
 
@@ -57,7 +58,7 @@ RLS, RPC, funciones, R2 metadata y auditoría técnica.
 - POS PROD: **INCONCLUSIVE**, requiere sesión Vendor.
 - Caja PROD: **PASS visual/read-only**; modal y estado vacío comprobados.
 - Responsive PROD: **INCONCLUSIVE**; desktop verificado, viewport móvil real pendiente.
-- Cloudflare: **PASS**, producción publicada en `f03af60`.
+- Cloudflare: **PASS**, producción funcional publicada en `f03af60`; el HEAD documental final queda en `0dcb24f`.
 - Manifest `/manifest.json`: **PASS**.
 - Service worker `altix-shell-v3`: **PASS**.
 - TypeScript: **PASS**.
@@ -72,6 +73,13 @@ RLS, RPC, funciones, R2 metadata y auditoría técnica.
 No se eliminó porque no existe sesión administrativa/CLI autenticada de
 Netlify en este entorno.
 
+La CLI `netlify` no está instalada; la configuración local encontrada sólo
+contiene telemetría y no contiene una sesión administrativa reutilizable.
+
+No existe una sesión Vendor autenticada activa en el navegador durante este
+cierre. No se crearon usuarios, no se recuperaron contraseñas y no se
+intentó un login sin credenciales explícitas.
+
 **Acción manual única pendiente:** entrar al sitio legacy en Netlify,
 desconectar la integración GitHub/auto-deploy y eliminar o despublicar el
 sitio `altixv1`.
@@ -81,3 +89,11 @@ sitio `altixv1`.
 - ALTIX PROD CLEAN: **YES** para los datos TEST identificados.
 - ALTIX READY FOR REAL DATA: **NO**, hasta validar Vendor/POS en sesión real,
   completar viewport móvil y retirar Netlify legacy.
+
+## Último cierre operativo
+
+- Netlify: **MANUAL ACTION REQUIRED**.
+- Vendor PROD: **INCONCLUSIVE**.
+- POS PROD: **INCONCLUSIVE**.
+- Apertura de caja Vendor: **INCONCLUSIVE**.
+- Mobile físico: **PENDIENTE**.
