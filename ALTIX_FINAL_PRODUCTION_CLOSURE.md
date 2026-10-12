@@ -3,7 +3,7 @@
 Fecha: 2026-10-12
 Proyecto Supabase PROD: `tkhwzpocbyonurxwvmcv`
 Commit funcional publicado: `f03af60`
-HEAD final de `main`: `0dcb24f`
+HEAD final de `main`: `6a3f532`
 
 ## Corrección visual real
 
@@ -58,7 +58,7 @@ RLS, RPC, funciones, R2 metadata y auditoría técnica.
 - POS PROD: **INCONCLUSIVE**, requiere sesión Vendor.
 - Caja PROD: **PASS visual/read-only**; modal y estado vacío comprobados.
 - Responsive PROD: **INCONCLUSIVE**; desktop verificado, viewport móvil real pendiente.
-- Cloudflare: **PASS**, producción funcional publicada en `f03af60`; el HEAD documental final queda en `0dcb24f`.
+- Cloudflare: **PASS**, producción funcional publicada en `f03af60`; el HEAD documental final queda en `6a3f532`.
 - Manifest `/manifest.json`: **PASS**.
 - Service worker `altix-shell-v3`: **PASS**.
 - TypeScript: **PASS**.
